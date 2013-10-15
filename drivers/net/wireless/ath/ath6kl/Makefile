@@ -20,22 +20,33 @@
 #
 #
 # Author(s): ="Atheros"
+# daniel: ath6kl_sdio -> ath6kl
 #------------------------------------------------------------------------------
 
-obj-$(CONFIG_ATH6KL) += ath6kl.o
+obj-$(CONFIG_ATH6KL) := ath6kl.o
 ath6kl-y += debug.o
+ath6kl-y += debugfs_pri.o
 ath6kl-y += hif.o
-ath6kl-y += htc_mbox.o
-ath6kl-y += htc_pipe.o
+ath6kl-y += htc.o
 ath6kl-y += bmi.o
 ath6kl-y += cfg80211.o
+ath6kl-y += cfg80211_btcoex.o
+ath6kl-y += pm.o
 ath6kl-y += init.o
 ath6kl-y += main.o
 ath6kl-y += txrx.o
 ath6kl-y += wmi.o
-ath6kl-y += core.o
-ath6kl-y += pm.o
+ath6kl-y += wmi_btcoex.o
+ath6kl-y += sdio.o
+ath6kl-y += platform.o
+ath6kl-y += softmac.o
+ath6kl-y += regd.o
+ath6kl-y += wmiconfig.o
+ath6kl-y += recovery.o
 ath6kl-$(CONFIG_MACH_PX) += softmac.o
 ath6kl-$(CONFIG_NL80211_TESTMODE) += testmode.o
 ath6kl-$(CONFIG_ATH6KL_SDIO) += sdio.o
 ath6kl-$(CONFIG_ATH6KL_USB) += usb.o
+
+ccflags-y += -D__CHECK_ENDIAN__
+ccflags-y += -DSS_3RD_INTF
