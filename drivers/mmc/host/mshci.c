@@ -2046,7 +2046,8 @@ int mshci_add_host(struct mshci_host *host)
 	 * mmc->caps |= MMC_CAP_SDIO_IRQ | MMC_CAP_ERASE;
 	 * 
 	 */
-	mmc->caps |= MMC_CAP_SDIO_IRQ;
+	mmc->caps |= MMC_CAP_SDIO_IRQ | MMC_CAP_ERASE;
+// fix fstrim, don't use in recovery	mmc->caps |= MMC_CAP_SDIO_IRQ;
 	mmc->caps |= MMC_CAP_4_BIT_DATA;
 
 	mmc->ocr_avail = 0;
