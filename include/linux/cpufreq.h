@@ -24,6 +24,14 @@
 
 #define CPUFREQ_NAME_LEN 16
 
+#define CPU_UV_MV_MAX 1450000
+#define CPU_UV_MV_MIN 800000
+#if defined(CONFIG_MACH_P8) || defined(CONFIG_MACH_P8LTE)
+#define CPU_SAFE_MAX_FREQ  1400000
+#else
+#define CPU_SAFE_MAX_FREQ  1200000
+#endif
+#define CPU_SAFE_MIN_FREQ  200000
 
 /*********************************************************************
  *                     CPUFREQ NOTIFIER INTERFACE                    *

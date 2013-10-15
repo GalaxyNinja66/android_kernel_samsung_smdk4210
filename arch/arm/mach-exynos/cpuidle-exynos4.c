@@ -341,10 +341,12 @@ static int check_usb_op(void)
 #endif
 }
 
-#ifdef CONFIG_SND_SAMSUNG_RP
-#if defined(CONFIG_MACH_U1_NA_SPR)
+#ifdef CONFIG_MACH_U1_NA_SPR
 #include "../../../sound/soc/samsung/srp-types.h"
+#include "../../../sound/soc/samsung/idma.h"
 #endif
+
+#ifdef CONFIG_SND_SAMSUNG_RP
 extern int srp_get_op_level(void);	/* By srp driver */
 #endif
 
@@ -774,7 +776,7 @@ static struct cpuidle_state exynos4_cpuidle_set[] = {
 	[1] = {
 		.enter			= exynos4_enter_lowpower,
 		.exit_latency		= 300,
-		.target_residency	= 10000,
+		.target_residency	= 5000,
 		.flags			= CPUIDLE_FLAG_TIME_VALID,
 		.name			= "LOW_POWER",
 		.desc			= "ARM power down",
