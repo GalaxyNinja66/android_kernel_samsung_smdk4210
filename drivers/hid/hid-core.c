@@ -1136,7 +1136,7 @@ EXPORT_SYMBOL_GPL(hid_input_report);
 static bool hid_match_one_id(struct hid_device *hdev,
 		const struct hid_device_id *id)
 {
-	return id->bus == hdev->bus &&
+	return (id->bus == HID_BUS_ANY || id->bus == hdev->bus) &&
 		(id->vendor == HID_ANY_ID || id->vendor == hdev->vendor) &&
 		(id->product == HID_ANY_ID || id->product == hdev->product);
 }
@@ -1911,7 +1911,7 @@ static const struct hid_device_id hid_mouse_ignore_list[] = {
 	{ }
 };
 
-static bool hid_ignore(struct hid_device *hdev)
+bool hid_ignore(struct hid_device *hdev)
 {
 	switch (hdev->vendor) {
 	case USB_VENDOR_ID_CODEMERCS:

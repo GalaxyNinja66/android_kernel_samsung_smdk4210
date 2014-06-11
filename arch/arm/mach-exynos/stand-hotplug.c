@@ -358,7 +358,7 @@ static int __init exynos4_pm_hotplug_init(void)
 
 	printk(KERN_INFO "EXYNOS4 PM-hotplug init function\n");
 	//hotplug_wq = create_workqueue("dynamic hotplug");
-	hotplug_wq = alloc_workqueue("dynamic hotplug", 0, 0);
+	hotplug_wq = alloc_workqueue("dynamic hotplug", 0, 0); // @daniel, module , 0);
 	if (!hotplug_wq) {
 		printk(KERN_ERR "Creation of hotplug work failed\n");
 		return -EFAULT;

@@ -135,7 +135,7 @@ static int exynos_target(struct cpufreq_policy *policy,
 
 	if (!exynos_cpufreq_lock_disable && (index < g_cpufreq_limit_level))
 		index = g_cpufreq_limit_level;
-
+//@daniel, change to 4
 #if defined(CONFIG_CPU_EXYNOS4210)
 	/* Do NOT step up max arm clock directly to reduce power consumption */
 	if (index == exynos_info->max_support_idx && old_index > 4)
@@ -731,6 +731,7 @@ static struct notifier_block exynos_cpufreq_policy_notifier = {
 
 static int exynos_cpufreq_cpu_init(struct cpufreq_policy *policy)
 {
+// @daniel, from ezy
   int ret;
   
 	policy->cur = policy->min = policy->max = exynos_getspeed(policy->cpu);
@@ -754,10 +755,10 @@ static int exynos_cpufreq_cpu_init(struct cpufreq_policy *policy)
 	}
 
 	ret = cpufreq_frequency_table_cpuinfo(policy, exynos_info->freq_table);
-
+//#if defined(CONFIG_MACH_P8) || defined(CONFIG_MACH_P8_LTE)	//@daniel
 	policy->max = CPU_SAFE_MAX_FREQ;
 	policy->min = CPU_SAFE_MIN_FREQ;
-
+//#endif
 	return ret;
 }
 
@@ -778,7 +779,7 @@ static struct notifier_block exynos_cpufreq_reboot_notifier = {
 	.notifier_call = exynos_cpufreq_reboot_notifier_call,
 };
 
-/* Make sure we populate scaling_available_freqs in sysfs - netarchy */
+/* @daniel, Make sure we populate scaling_available_freqs in sysfs - netarchy */
 static struct freq_attr *exynos_cpufreq_attr[] = {
   &cpufreq_freq_attr_scaling_available_freqs,
   NULL,

@@ -341,7 +341,7 @@ static int check_usb_op(void)
 #endif
 }
 
-#ifdef CONFIG_MACH_U1_NA_SPR
+#if defined (CONFIG_MACH_U1_NA_SPR) || (CONFIG_MACH_U1_NA_USCC)
 #include "../../../sound/soc/samsung/srp-types.h"
 #include "../../../sound/soc/samsung/idma.h"
 #endif

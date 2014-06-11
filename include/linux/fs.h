@@ -1,6 +1,11 @@
 #ifndef _LINUX_FS_H
 #define _LINUX_FS_H
-
+/* @daniel, backport form 3.13-1
+ * some versions don't have this and thus don't
+ * include it from the original fs.h
+ */
+#include <linux/uidgid.h>
+// @
 /*
  * This file has definitions for some important file table
  * structures etc.
@@ -2599,6 +2604,7 @@ static inline void inode_has_no_xattr(struct inode *inode)
 	if (!is_sxid(inode->i_mode) && (inode->i_sb->s_flags & MS_NOSEC))
 		inode->i_flags |= S_NOSEC;
 }
-
+// @ daniel, backport 3.31-1
+extern int simple_open(struct inode *inode, struct file *file);
 #endif /* __KERNEL__ */
 #endif /* _LINUX_FS_H */

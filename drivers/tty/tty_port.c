@@ -413,6 +413,15 @@ void tty_port_close(struct tty_port *port, struct tty_struct *tty,
 }
 EXPORT_SYMBOL(tty_port_close);
 
+//@daniel, required in backport 3.13-1
+int tty_port_install(struct tty_port *port, struct tty_driver *driver,
+	struct tty_struct *tty)
+{
+	tty->port = port;
+	return tty_standard_install(driver, tty);
+}
+EXPORT_SYMBOL_GPL(tty_port_install);
+// @
 int tty_port_open(struct tty_port *port, struct tty_struct *tty,
 							struct file *filp)
 {

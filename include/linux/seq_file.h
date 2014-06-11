@@ -6,7 +6,13 @@
 #include <linux/mutex.h>
 #include <linux/cpumask.h>
 #include <linux/nodemask.h>
-
+// @daniel, backport 3.31-1
+static inline struct user_namespace *seq_user_ns(struct seq_file *seq)
+{
+	extern struct user_namespace init_user_ns;
+	return &init_user_ns;
+}
+// @
 struct seq_operations;
 struct file;
 struct path;

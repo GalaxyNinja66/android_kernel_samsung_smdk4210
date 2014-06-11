@@ -3164,7 +3164,11 @@ EXPORT_SYMBOL_GPL(__alloc_workqueue_key);
  *
  * Safely destroy a workqueue. All work currently pending will be done first.
  */
+#ifdef CONFIG_BT
+void destroy_workqueue1(struct workqueue_struct *wq)
+#else
 void destroy_workqueue(struct workqueue_struct *wq)
+#endif
 {
 	unsigned int flush_cnt = 0;
 	unsigned int cpu;
@@ -3228,8 +3232,11 @@ reflush:
 	free_cwqs(wq);
 	kfree(wq);
 }
+#ifdef CONFIG_BT
+EXPORT_SYMBOL_GPL(destroy_workqueue1);
+#else
 EXPORT_SYMBOL_GPL(destroy_workqueue);
-
+#endif
 /**
  * workqueue_set_max_active - adjust max_active of a workqueue
  * @wq: target workqueue

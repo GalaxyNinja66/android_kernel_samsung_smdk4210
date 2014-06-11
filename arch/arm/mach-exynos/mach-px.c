@@ -2228,7 +2228,7 @@ static struct fimg2d_platdata fimg2d_data __initdata = {
 	.parent_clkname = "mout_g2d0",
 	.clkname = "sclk_fimg2d",
 	.gate_clkname = "fimg2d",
-	.clkrate = 267 * 1000000,	/* 266 Mhz */
+	.clkrate = 360 * 1000000,	/* @daniel, 300, 266 Mhz */
 };
 #endif
 
@@ -3055,8 +3055,8 @@ static struct mpu3050_platform_data mpu3050_pdata = {
 			1, 0, 0,
 			0, 0, 1},
 #elif defined(CONFIG_MACH_P2)
-	.orientation = {0, 1, 0,
-			1, 0, 0,
+	.orientation = {0, 1, 0,		// @daniel, fix orientation
+			1, 0, 0,		// @
 			0, 0, -1},
 #elif defined(CONFIG_MACH_P4)
 	.orientation = {1 , 0, 0,
@@ -3087,8 +3087,8 @@ static struct mpu3050_platform_data mpu3050_pdata = {
 				-1, 0, 0,
 				0, 0, 1},
 #elif defined(CONFIG_MACH_P2)
-		.orientation = {0, 1, 0,
-				1, 0, 0,
+		.orientation = {0, 1, 0,		// @daniel, fix orientation
+				1, 0, 0,		// @
 				0, 0, -1},
 #elif defined(CONFIG_MACH_P4)
 		.orientation = {0, -1, 0,
@@ -3111,7 +3111,7 @@ static struct mpu3050_platform_data mpu3050_pdata = {
 		 * 90 degrees clockwise from natural orientation.
 		 * So X & Y are swapped and Y & Z are negated.
 		 */
-		.orientation = {0, -1, 0,
+		.orientation = {0, -1, 0,		// @daniel, fix orientation
 				1, 0, 0,
 				0, 0, 1},
 	},
@@ -6393,7 +6393,7 @@ void smdk_accessory_power(u8 token, bool active)
 	if (system_rev >= 2)
 		gpio_acc_5v = GPIO_ACCESSORY_OUT_5V;
 	/*for checking p8 3g and wifi*/
-#elif defined(CONFIG_MACH_P8) || defined(CONFIG_MACH_P8LTE)
+#elif defined(CONFIG_MACH_P8)
 if (system_rev >= 4)
 		gpio_acc_5v = GPIO_ACCESSORY_OUT_5V;
 #endif

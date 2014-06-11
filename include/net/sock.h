@@ -535,7 +535,36 @@ static __inline__ void sk_add_bind_node(struct sock *sk,
 	hlist_for_each_entry_safe(__sk, node, tmp, list, sk_node)
 #define sk_for_each_bound(__sk, node, list) \
 	hlist_for_each_entry(__sk, node, list, sk_bind_node)
+// @daniel, from backport 3.13-1
+#include <backport/magic.h>
+#define sk_for_each3(__sk, node, list) \
+	hlist_for_each_entry(__sk, node, list, sk_node)
 
+#define sk_for_each_safe4(__sk, node, tmp, list) \
+	hlist_for_each_entry_safe(__sk, node, tmp, list, sk_node)
+
+#define sk_for_each2(__sk, list) \
+	hlist_for_each_entry(__sk, list, sk_node)
+
+#define sk_for_each_safe3(__sk, tmp, list) \
+	hlist_for_each_entry_safe(__sk, tmp, list, sk_node)
+
+#undef sk_for_each
+#define sk_for_each(...) \
+	macro_dispatcher(sk_for_each, __VA_ARGS__)(__VA_ARGS__)
+#undef sk_for_each_safe
+#define sk_for_each_safe(...) \
+	macro_dispatcher(sk_for_each_safe, __VA_ARGS__)(__VA_ARGS__)
+
+/*
+ * backport SOCK_SELECT_ERR_QUEUE -- see commit
+ * "net: add option to enable error queue packets waking select"
+ *
+ * Adding 14 to SOCK_QUEUE_SHRUNK will reach a bet that can't be
+ * set on older kernels, so sock_flag() will always return false.
+ */
+#define SOCK_SELECT_ERR_QUEUE (SOCK_QUEUE_SHRUNK + 14)
+// @#
 /* Sock flags */
 enum sock_flags {
 	SOCK_DEAD,
