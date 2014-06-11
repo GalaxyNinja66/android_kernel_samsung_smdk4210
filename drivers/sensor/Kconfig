@@ -101,16 +101,16 @@ config SENSORS_BH1721
 
 	  Say N here if you do not use BH1721.
 
-config SENSORS_AL3201
-	depends on I2C
-	tristate "AL3201 driver"
-	default n
-	help
-	  Say Y here if you use AL3201.
-	  This option enables light sensor using
-	  ROHM AL3201 device driver.
-
-	  Say N here if you do not use AL3201.
+#config SENSORS_AL3201
+#	depends on I2C
+#	tristate "AL3201 driver"
+#	default n
+#	help
+#	  Say Y here if you use AL3201.
+#	  This option enables light sensor using
+#	  ROHM AL3201 device driver.
+#
+#	  Say N here if you do not use AL3201.
 
 config SENSORS_K3DH
 	tristate "K3DH acceleration sensor support"

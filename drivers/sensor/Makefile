@@ -22,7 +22,7 @@ obj-$(CONFIG_SENSORS_GP2A)		+= gp2a_proximity.o gp2a_light.o
 obj-$(CONFIG_SENSORS_GP2A_ANALOG)	+= gp2a_analog.o
 obj-$(CONFIG_SENSORS_CM36651)		+= cm36651.o
 obj-$(CONFIG_SENSORS_BH1721)		+= bh1721.o
-obj-$(CONFIG_SENSORS_AL3201)		+= al3201.o
+#obj-$(CONFIG_SENSORS_AL3201)		+= al3201.o
 # barometer_sensor
 obj-$(CONFIG_SENSORS_BMP180)		+= bmp180.o
 obj-$(CONFIG_SENSORS_LPS331)		+= lps331ap.o
