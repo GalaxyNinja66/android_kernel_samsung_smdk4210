@@ -12,7 +12,6 @@
 #include <linux/cpu.h>
 #include <linux/cpumask.h>
 #include <linux/regulator/machine.h>
-#include <linux/ir_remote_con.h>
 #include <asm/irq.h>
 #include <mach/cpufreq.h>
 
@@ -21,8 +20,7 @@
 #define NANO_SEC 1000000000
 #define MICRO_SEC 1000000
 
-static struct regulator	*regulator;
-static int regulator_status = -1;
+extern struct class *sec_class;
 
 struct ir_remocon_data {
 	struct mutex mutex;
@@ -46,11 +44,11 @@ static int gpio_init(struct ir_remocon_data *data)
 
 static void ir_remocon_send(struct ir_remocon_data *data)
 {
+	struct regulator	*regulator;
 	unsigned int		period, off_period = 0;
 	unsigned int		duty;
 	unsigned int		on, off = 0;
-	unsigned int		i, j;
-	int					ret;
+	unsigned int		i, j, ret;
 	static int		cpu_lv = -1;
 
 	if (data->pwr_en == -1) {
@@ -59,7 +57,6 @@ static void ir_remocon_send(struct ir_remocon_data *data)
 			goto out;
 
 		regulator_enable(regulator);
-		regulator_status = 1;
 	}
 
 	if (data->pwr_en != -1)
@@ -68,10 +65,7 @@ static void ir_remocon_send(struct ir_remocon_data *data)
 	__udelay(1000);
 
 	if (cpu_lv == -1) {
-		if (data->pwr_en == -1)
-			exynos_cpufreq_get_level(800000, &cpu_lv);
-		else
-			exynos_cpufreq_get_level(800000, &cpu_lv);
+		exynos_cpufreq_get_level(800000, &cpu_lv);
 	}
 
 	ret = exynos_cpufreq_lock(DVFS_LOCK_ID_IR_LED, cpu_lv);
@@ -82,33 +76,14 @@ static void ir_remocon_send(struct ir_remocon_data *data)
 	if (ret < 0)
 		pr_err("%s: fail to lock cpufreq(limit)\n", __func__);
 
-	 period  = (MICRO_SEC/data->signal[0]);
-	 if ((MICRO_SEC % data->signal[0]) >= (data->signal[0]/2)) {
-		if (data->pwr_en == -1) {
-#ifdef CONFIG_MACH_P2
-			if (data->signal[0] < 50000)
-				period += 1;
-#endif
-#ifdef CONFIG_MACH_P4NOTE
-				period += 1;
-#endif
-		} else
-			period += 1;
-	}
+	if (data->pwr_en == -1)
+		period  = (MICRO_SEC/data->signal[0])-2;
+	else
+		period  = (MICRO_SEC/data->signal[0])-1;
 
 	duty = period/4;
-	if ((period % 4) >= 2)
-		duty += 1;
 	on = duty;
-
-	if (data->pwr_en == -1)
-		off = (period - duty) - 3;
-	else
-		off = (period - duty) - 2;
-
-#ifdef CONFIG_MACH_P4NOTE
-	 off = (period - duty) - 3;
-#endif
+	off = period - duty;
 
 	local_irq_disable();
 	for (i = 1; i < MAX_SIZE; i += 2) {
@@ -123,19 +98,13 @@ static void ir_remocon_send(struct ir_remocon_data *data)
 		}
 
 		if (data->pwr_en == -1)
-			off_period = data->signal[i+1]*period;
-		else {
-			if (data->signal[0] < 50000)
-				off_period = data->signal[i+1]*(period+2);
-			else
-				off_period = data->signal[i+1]*(period+1);
-		}
+			period = (MICRO_SEC/data->signal[0]);
+		else
+			period = (MICRO_SEC/data->signal[0])+1;
 
-#ifdef CONFIG_MACH_P4NOTE
-		off_period = data->signal[i+1]*(period+1);
-#endif
+		off_period = data->signal[i+1]*period;
 
-		if (off_period <= 30000) {
+		if (off_period <= 9999) {
 			if (off_period > 1000) {
 				__udelay(off_period % 1000);
 				mdelay(off_period/1000);
@@ -161,17 +130,16 @@ static void ir_remocon_send(struct ir_remocon_data *data)
 	if (data->pwr_en != -1)
 		gpio_direction_output(data->pwr_en, 0);
 
-	if ((data->pwr_en == -1) && (regulator_status == 1)) {
+	if (data->pwr_en == -1) {
 		regulator_force_disable(regulator);
 		regulator_put(regulator);
-
-		regulator_status = -1;
 	}
 out: ;
 }
 
 static void ir_remocon_send_test(struct ir_remocon_data *data)
 {
+	struct regulator *regulator;
 	unsigned int period = 0;
 	int i;
 	period = MICRO_SEC / data->signal[0];
@@ -182,7 +150,6 @@ static void ir_remocon_send_test(struct ir_remocon_data *data)
 			goto out;
 
 		regulator_enable(regulator);
-		regulator_status = 1;
 	}
 
 	if (data->pwr_en != -1)
@@ -205,11 +172,9 @@ static void ir_remocon_send_test(struct ir_remocon_data *data)
 	if (data->pwr_en != -1)
 		gpio_direction_output(data->pwr_en, 0);
 
-	if ((data->pwr_en == -1) && (regulator_status == 1)) {
+	if (data->pwr_en == -1) {
 		regulator_force_disable(regulator);
 		regulator_put(regulator);
-
-		regulator_status = -1;
 	}
 out: ;
 }
@@ -233,7 +198,7 @@ static void ir_remocon_work_test(struct work_struct *work)
 }
 
 static ssize_t remocon_store(struct device *dev, struct device_attribute *attr,
-			     const char *buf, size_t size)
+			     char *buf, size_t size)
 {
 	struct ir_remocon_data *data = dev_get_drvdata(dev);
 	int i;
@@ -396,7 +361,7 @@ static struct platform_driver ir_remocon_device_driver = {
 
 static int __init ir_remocon_init(void)
 {
-#if defined(CONFIG_IR_REMOCON_GPIO_EUR) || defined(CONFIG_IR_REMOCON_GPIO_TMO)
+#if defined(CONFIG_IR_REMOCON_EUR)
 	if (system_rev >= 11)
 		return 0;
 #endif
