@@ -19,6 +19,13 @@ config MALI400_INTERNAL_PROFILING
 	---help---
 	  This enables the internal legacy Mali profiling API.
 	  
+config GPU_CONTROL
+	bool "Enable GPU clock and voltage interface"
+	depends on VIDEO_SAMSUNG
+	default y
+	help
+	This enables a sysfs interface to control gpu clock and voltage.
+
 if CPU_EXYNOS4210 || CPU_EXYNOS4212 || CPU_EXYNOS4412
 config MALI_DVFS
 	bool "Enable mali DVFS"

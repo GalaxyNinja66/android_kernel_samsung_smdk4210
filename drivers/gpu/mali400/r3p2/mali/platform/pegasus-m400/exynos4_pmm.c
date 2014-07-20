@@ -87,7 +87,7 @@ typedef struct mali_runtime_resumeTag{
 	unsigned int step;
 }mali_runtime_resume_table;
 
-mali_runtime_resume_table mali_runtime_resume = {360, 900000, 1};
+mali_runtime_resume_table mali_runtime_resume = {360, 1050000, 1};
 
 /* dvfs table */
 mali_dvfs_table mali_dvfs[MALI_DVFS_STEPS]={
@@ -98,8 +98,8 @@ mali_dvfs_table mali_dvfs[MALI_DVFS_STEPS]={
 			/* step 3 */{440  ,1000000	,1025000   ,85   , 90},
 			/* step 4 */{533  ,1000000	,1075000   ,95   ,100} };
 #else
-			/* step 0 */{134  ,1000000	, 950000   ,85   , 90},
-			/* step 1 */{360  ,1000000	,1050000   ,85   ,100} };
+			/* step 0 */{160  ,1000000	,950000   ,0   , 90},
+			/* step 1 */{400  ,1000000	,1050000   ,85   ,100} };
 #endif
 
 #ifdef EXYNOS4_ASV_ENABLED
@@ -169,14 +169,14 @@ static unsigned int asv_3d_volt_4212_9_table[MALI_DVFS_STEPS][ASV_LEVEL_PD] = {
 static unsigned int asv_3d_volt_4210_12_table[MALI_DVFS_STEPS][ASV_LEVEL_4210_12] = {
 	{  1000000,  1000000,  1000000,   950000,   950000,   950000,   950000,   950000},	/* L1(134Mhz) */
 #if (MALI_DVFS_STEPS > 1)
-	{  1100000,  1100000,  1100000,  1000000,  1000000,  1000000,  1000000,   950000},	/* L0(266Mhz) */
+	{  1100000,  1100000,  1100000,  1050000,  1050000,  1000000,  1000000,   950000},	/* L0(266Mhz) */
 #endif
 };
 
 static unsigned int asv_3d_volt_4210_14_table[MALI_DVFS_STEPS][ASV_LEVEL_4210_14] = {
 	{  1000000,  1000000,   950000,   950000,   950000},	/* L1(134Mhz) */
 #if (MALI_DVFS_STEPS > 1)
-	{  1100000,  1100000,  1000000,  1000000,   950000},	/* L0(266Mhz) */
+	{  1100000,  1100000,  1050000,  1000000,   950000},	/* L0(266Mhz) */
 #endif
 };
 #endif
@@ -206,15 +206,17 @@ static struct clk *mali_clock		= NULL;
 
 #if defined(CONFIG_CPU_EXYNOS4412) || defined(CONFIG_CPU_EXYNOS4212)
 /* Pegasus */
-static const mali_bool bis_vpll = MALI_TRUE;
+static int bis_vpll = 1;
 int mali_gpu_clk = 440;
 int mali_gpu_vol = 1025000;
 #else
 /* Orion */
-static const mali_bool bis_vpll = MALI_FALSE;
-int mali_gpu_clk = 360;
+static int bis_vpll = 0;
+int mali_gpu_clk = 400;
 int mali_gpu_vol = 1050000;
 #endif
+
+extern int mali_use_vpll;
 
 static unsigned int GPU_MHZ	= 1000000;
 
@@ -254,7 +256,7 @@ MODULE_PARM_DESC(gpu_power_state, "Mali Power State");
 struct regulator *g3d_regulator = NULL;
 #endif
 
-mali_io_address clk_register_map = 0;
+//mali_io_address clk_register_map = 0;
 
 /* DVFS */
 static unsigned int mali_dvfs_utilization = 255;
@@ -264,7 +266,7 @@ static void update_time_in_state(int level);
 #endif
 static void mali_dvfs_work_handler(struct work_struct *w);
 static struct workqueue_struct *mali_dvfs_wq = 0;
-extern mali_io_address clk_register_map;
+extern mali_io_address clk_register_map = 0;
 _mali_osk_lock_t *mali_dvfs_lock;
 int mali_runtime_resumed = -1;
 static DECLARE_WORK(mali_dvfs_work, mali_dvfs_work_handler);
@@ -320,6 +322,7 @@ static unsigned int get_mali_dvfs_status(void)
 
 mali_bool mali_clk_get(void)
 {
+	bis_vpll = mali_use_vpll;
 	if (bis_vpll)
 	{
 		if (ext_xtal_clock == NULL)
@@ -479,6 +482,7 @@ void mali_clk_set_rate(unsigned int clk, unsigned int mhz)
  		return;
 	}
 	
+	bis_vpll = mali_use_vpll;
 	if (bis_vpll)
 	{
 		clk_set_rate(fout_vpll_clock, (unsigned int)clk * GPU_MHZ);
@@ -829,9 +833,21 @@ static mali_bool mali_dvfs_status(unsigned int utilization)
 	unsigned int nextStatus = 0;
 	unsigned int curStatus = 0;
 	mali_bool boostup = MALI_FALSE;
+#ifdef EXYNOS4_ASV_ENABLED
+	static mali_bool asv_applied = MALI_FALSE;	//@daniel, from r3p1
+#endif
 	static int stay_count = 5;
 
 	MALI_DEBUG_PRINT(4, ("> mali_dvfs_status: %d \n",utilization));
+#ifdef EXYNOS4_ASV_ENABLED
+	if (asv_applied == MALI_FALSE) {
+		mali_dvfs_table_update();
+		change_mali_dvfs_status(0,0);
+		asv_applied = MALI_TRUE;
+
+		return MALI_TRUE;
+	}
+#endif
 
 	/* decide next step */
 	curStatus = get_mali_dvfs_status();

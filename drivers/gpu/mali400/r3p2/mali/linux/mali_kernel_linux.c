@@ -44,6 +44,12 @@
 #include "../platform/exynos4270/exynos4_pmm.h"
 #endif
 
+/* @daniel, GPU CONTROL */
+#if defined(CONFIG_GPU_CONTROL)
+#include "../common/gpu_clock_control.h"
+#include "../common/gpu_voltage_control.h"
+#endif
+
 /* Streamline support for the Mali driver */
 #if defined(CONFIG_TRACEPOINTS) && defined(CONFIG_MALI400_PROFILING)
 /* Ask Linux to create the tracepoints */
@@ -96,6 +102,12 @@ MODULE_PARM_DESC(mali_max_pp_cores_group_2, "Limit the number of PP cores to use
 #include "mali_user_settings_db.h"
 EXPORT_SYMBOL(mali_set_user_setting);
 EXPORT_SYMBOL(mali_get_user_setting);
+
+#ifdef CONFIG_CPU_EXYNOS4210
+int mali_use_vpll = 1;
+module_param(mali_use_vpll, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH); /* rw--rw--r-- */
+MODULE_PARM_DESC(mali_use_vpll, "Mali Use VPLL for Clock");
+#endif
 
 static char mali_dev_name[] = "mali"; /* should be const, but the functions we call requires non-cost */
 
@@ -237,6 +249,11 @@ int mali_module_init(void)
         }
 #endif
 
+/* init GPU CONTROL */
+#ifdef CONFIG_GPU_CONTROL
+	gpu_clock_control_start();
+	gpu_voltage_control_start();
+#endif
 	MALI_PRINT(("Mali device driver loaded\n"));
 
 	return 0; /* Success */
