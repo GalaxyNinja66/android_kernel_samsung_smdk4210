@@ -47,7 +47,7 @@
 
 /* SIOP */
 #define CHARGING_CURRENT_HIGH_LOW_STANDARD	450
-#define CHARGING_CURRENT_USB			500
+#define CHARGING_CURRENT_USB			650
 #define SIOP_ACTIVE_CHARGE_CURRENT		450
 #define SIOP_DEACTIVE_CHARGE_CURRENT		1500
 
@@ -2122,7 +2122,7 @@ static int sec_cable_status_update(struct battery_data *battery, int status)
 		break;
 	case CHARGER_USB:
 		pr_info("cable USB");
-		battery->info.charging_source = CHARGER_USB;
+		battery->info.charging_source = CHARGER_AC;
 		battery->cable_type = POWER_SUPPLY_TYPE_USB;
 		break;
 	case CHARGER_AC:
