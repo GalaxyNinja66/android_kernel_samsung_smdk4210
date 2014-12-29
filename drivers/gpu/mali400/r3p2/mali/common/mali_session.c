@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2012-2013 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -18,9 +18,13 @@ _mali_osk_lock_t *mali_sessions_lock;
 
 _mali_osk_errcode_t mali_session_initialize(void)
 {
+	const _mali_osk_lock_flags_t lock_flags = _MALI_OSK_LOCKFLAG_READERWRITER |
+	                                          _MALI_OSK_LOCKFLAG_ORDERED |
+	                                          _MALI_OSK_LOCKFLAG_NONINTERRUPTABLE;
+
 	_MALI_OSK_INIT_LIST_HEAD(&mali_sessions);
 
-	mali_sessions_lock = _mali_osk_lock_init(_MALI_OSK_LOCKFLAG_READERWRITER | _MALI_OSK_LOCKFLAG_ORDERED, 0, _MALI_OSK_LOCK_ORDER_SESSIONS);
+	mali_sessions_lock = _mali_osk_lock_init(lock_flags, 0, _MALI_OSK_LOCK_ORDER_SESSIONS);
 
 	if (NULL == mali_sessions_lock) return _MALI_OSK_ERR_NOMEM;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2013 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -10,7 +10,6 @@
 #include <linux/fs.h>       /* file system operations */
 #include <linux/slab.h>     /* memort allocation functions */
 #include <asm/uaccess.h>    /* user space access */
-#include <linux/pid.h>
 
 #include "mali_ukk.h"
 #include "mali_osk.h"
@@ -24,9 +23,6 @@ int get_api_version_wrapper(struct mali_session_data *session_data, _mali_uk_get
 	_mali_uk_get_api_version_s kargs;
     _mali_osk_errcode_t err;
 
-	u32 mem = _mali_ukk_report_memory_usage();
-	printk("Mali: mem_usage before %d : %u\n", _mali_osk_get_pid(), mem);
-
     MALI_CHECK_NON_NULL(uargs, -EINVAL);
 
     if (0 != get_user(kargs.version, &uargs->version)) return -EFAULT;
@@ -39,6 +35,19 @@ int get_api_version_wrapper(struct mali_session_data *session_data, _mali_uk_get
     if (0 != put_user(kargs.compatible, &uargs->compatible)) return -EFAULT;
 
     return 0;
+}
+
+int compositor_priority_wrapper(struct mali_session_data *session_data)
+{
+#ifndef CONFIG_SYNC
+	/* Compositor super priority is currently only needed and supported in
+	 * systems without linux fences */
+	_mali_ukk_compositor_priority(session_data);
+#else
+	MALI_DEBUG_PRINT(2, ("Compositor Pid: %d - Using native fence\n", _mali_osk_get_pid() ));
+#endif
+
+	return 0;
 }
 
 int wait_for_notification_wrapper(struct mali_session_data *session_data, _mali_uk_wait_for_notification_s __user *uargs)

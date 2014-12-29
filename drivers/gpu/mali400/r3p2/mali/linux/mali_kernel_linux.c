@@ -1,5 +1,5 @@
 /**
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2013 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -104,7 +104,7 @@ EXPORT_SYMBOL(mali_set_user_setting);
 EXPORT_SYMBOL(mali_get_user_setting);
 
 #ifdef CONFIG_CPU_EXYNOS4210
-int mali_use_vpll = 1;
+int mali_use_vpll = 0;	//@daniel, default to stock value
 module_param(mali_use_vpll, int, S_IRUSR | S_IWUSR | S_IWGRP | S_IRGRP | S_IROTH); /* rw--rw--r-- */
 MODULE_PARM_DESC(mali_use_vpll, "Mali Use VPLL for Clock");
 #endif
@@ -249,7 +249,7 @@ int mali_module_init(void)
         }
 #endif
 
-/* init GPU CONTROL */
+/* @daniel, init GPU CONTROL */
 #ifdef CONFIG_GPU_CONTROL
 	gpu_clock_control_start();
 	gpu_voltage_control_start();
@@ -552,6 +552,10 @@ static int mali_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, 
 
 		case MALI_IOC_GET_USER_SETTINGS:
 			err = get_user_settings_wrapper(session_data, (_mali_uk_get_user_settings_s __user *)arg);
+			break;
+
+		case MALI_IOC_COMPOSITOR_PRIORITY:
+			err = compositor_priority_wrapper(session_data);
 			break;
 
 #if defined(CONFIG_MALI400_PROFILING)

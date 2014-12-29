@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2013 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -240,6 +240,13 @@ _mali_osk_errcode_t _mali_ukk_post_notification( _mali_uk_post_notification_s *a
  * @return _MALI_OSK_ERR_OK on success, otherwise a suitable _mali_osk_errcode_t on failure.
  */
 _mali_osk_errcode_t _mali_ukk_get_api_version( _mali_uk_get_api_version_s *args );
+
+
+/* Make a U/K call to _mali_ukk_compositor_priority().
+ * Used to set that the current process is doing graphical compositing. Gives its rendering jobs higher priority
+ */
+void _mali_ukk_compositor_priority(void * session_ptr);
+
 
 /** @brief Get the user space settings applicable for calling process.
  *

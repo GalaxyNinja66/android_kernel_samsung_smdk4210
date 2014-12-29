@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2011, 2013 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -188,6 +188,7 @@ static int os_allocate(void* ctx, ump_dd_mem * descriptor)
 		/* MALI_SEC */
 		DBG_MSG(1, ("UMP memory allocated: %d kB  Configured maximum OS memory usage: %d kB\n",
 				 (pages_allocated * _MALI_OSK_CPU_PAGE_SIZE)/1024, (info->num_pages_max* _MALI_OSK_CPU_PAGE_SIZE)/1024));
+
 
 		while(pages_allocated)
 		{

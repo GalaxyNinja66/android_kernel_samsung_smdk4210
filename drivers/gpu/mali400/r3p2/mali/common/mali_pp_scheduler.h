@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2012-2013 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -30,6 +30,10 @@ void mali_pp_scheduler_job_done(struct mali_group *group, struct mali_pp_job *jo
 
 void mali_pp_scheduler_suspend(void);
 void mali_pp_scheduler_resume(void);
+
+void mali_pp_scheduler_schedule(void);
+
+extern mali_bool mali_pp_scheduler_blocked_on_compositor;
 
 /** @brief Abort all PP jobs from session running or queued
  *

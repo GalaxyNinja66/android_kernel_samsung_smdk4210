@@ -34,12 +34,9 @@ typedef struct mali_dvfs_tableTag{
 extern mali_dvfs_table mali_dvfs[2];
 
 static ssize_t gpu_clock_show(struct device *dev, struct device_attribute *attr, char *buf) {
-	return sprintf(buf, "Step0: %d\nStep1: %d\n" 
-			"Threshold0-1/up-down: %d%% %d%%\n",
+	return sprintf(buf, "%d %d\n",
 		mali_dvfs[0].clock,
-		mali_dvfs[1].clock,
-		mali_dvfs[0].upthreshold,
-		mali_dvfs[1].downthreshold
+		mali_dvfs[1].clock
 		);
 }
 
@@ -55,6 +52,7 @@ static ssize_t gpu_clock_store(struct device *dev, struct device_attribute *attr
 	      == 4 ) i=1;
 
 	if(i) {
+		// *** four arguments -> set threshold
 		if(g[1]<0 || g[0]>100) 
 			return -EINVAL;
 
@@ -63,6 +61,7 @@ static ssize_t gpu_clock_store(struct device *dev, struct device_attribute *attr
 		mali_dvfs[1].downthreshold = g[2];
 		mali_dvfs[1].upthreshold = g[3];
 	} else {
+		// *** two arguments -> set clock
 		if ( (ret=sscanf(buf, "%d %d", &g[0], &g[1])) != 2)
 			return -EINVAL;
 

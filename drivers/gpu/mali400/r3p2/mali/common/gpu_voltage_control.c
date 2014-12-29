@@ -37,7 +37,7 @@ extern mali_dvfs_table mali_dvfs[2];
 unsigned int gv[2];
 
 static ssize_t gpu_voltage_show(struct device *dev, struct device_attribute *attr, char *buf) {
-	return sprintf(buf, "Step1: %d\nStep2: %d\n",
+	return sprintf(buf, "%d %d\n",
 		       mali_dvfs[0].vol, mali_dvfs[1].vol);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2010-2013 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -34,6 +34,7 @@ struct mali_session_data
 	_MALI_OSK_LIST_HEAD(link); /**< Link for list of all sessions */
 
 	_MALI_OSK_LIST_HEAD(job_list); /**< List of all jobs on this session */
+	mali_bool is_compositor;       /**< Gives compositor priority to jobs from this session if TRUE */
 };
 
 _mali_osk_errcode_t mali_session_initialize(void);

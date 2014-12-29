@@ -87,7 +87,7 @@ typedef struct mali_runtime_resumeTag{
 	unsigned int step;
 }mali_runtime_resume_table;
 
-mali_runtime_resume_table mali_runtime_resume = {360, 1050000, 1};
+mali_runtime_resume_table mali_runtime_resume = {267, 1050000, 1};
 
 /* dvfs table */
 mali_dvfs_table mali_dvfs[MALI_DVFS_STEPS]={
@@ -98,8 +98,8 @@ mali_dvfs_table mali_dvfs[MALI_DVFS_STEPS]={
 			/* step 3 */{440  ,1000000	,1025000   ,85   , 90},
 			/* step 4 */{533  ,1000000	,1075000   ,95   ,100} };
 #else
-			/* step 0 */{160  ,1000000	,950000   ,0   , 90},
-			/* step 1 */{400  ,1000000	,1050000   ,85   ,100} };
+			/* step 0 */{108  ,1000000	,950000   ,0   , 90},
+			/* step 1 */{267  ,1000000	,1050000   ,85   ,100} };
 #endif
 
 #ifdef EXYNOS4_ASV_ENABLED
@@ -212,7 +212,7 @@ int mali_gpu_vol = 1025000;
 #else
 /* Orion */
 static int bis_vpll = 0;
-int mali_gpu_clk = 400;
+int mali_gpu_clk = 267;
 int mali_gpu_vol = 1050000;
 #endif
 
@@ -554,12 +554,12 @@ static mali_bool set_mali_dvfs_status(u32 step,mali_bool boostup)
 		/* change the clock */
 		mali_clk_set_rate(mali_dvfs[step].clock, mali_dvfs[step].freq);
 	} else {
-		/* change the clock */
-		mali_clk_set_rate(mali_dvfs[step].clock, mali_dvfs[step].freq);
 #ifdef CONFIG_REGULATOR
-		/* change the voltage */
+		/* change the voltage @daniel, change volatge first is better */
 		mali_regulator_set_voltage(mali_dvfs[step].vol, mali_dvfs[step].vol);
 #endif
+		/* change the clock */
+		mali_clk_set_rate(mali_dvfs[step].clock, mali_dvfs[step].freq);
 	}
 
 #if defined(CONFIG_MALI400_PROFILING)
@@ -833,13 +833,13 @@ static mali_bool mali_dvfs_status(unsigned int utilization)
 	unsigned int nextStatus = 0;
 	unsigned int curStatus = 0;
 	mali_bool boostup = MALI_FALSE;
-#ifdef EXYNOS4_ASV_ENABLED
-	static mali_bool asv_applied = MALI_FALSE;	//@daniel, from r3p1
+#ifdef EXYNOS4_ASV_ENABLED_0
+	static mali_bool asv_applied = MALI_FALSE;	//@daniel, from r3p1, disabled now
 #endif
 	static int stay_count = 5;
 
 	MALI_DEBUG_PRINT(4, ("> mali_dvfs_status: %d \n",utilization));
-#ifdef EXYNOS4_ASV_ENABLED
+#ifdef EXYNOS4_ASV_ENABLED_0
 	if (asv_applied == MALI_FALSE) {
 		mali_dvfs_table_update();
 		change_mali_dvfs_status(0,0);

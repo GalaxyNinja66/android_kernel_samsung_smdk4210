@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2010, 2012 ARM Limited. All rights reserved.
- *
+ * Copyright (C) 2010, 2012-2013 ARM Limited. All rights reserved.
+ * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
- *
+ * 
  * A copy of the licence is included with the program, and can also be obtained from Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
@@ -56,7 +56,7 @@ typedef enum
 {
 	UMP_REF_DRV_UK_CONSTRAINT_NONE = 0,
 	UMP_REF_DRV_UK_CONSTRAINT_PHYSICALLY_LINEAR = 1,
-	UMP_REF_DRV_UK_CONSTRAINT_USE_CACHE = 128,
+	UMP_REF_DRV_UK_CONSTRAINT_USE_CACHE = 4,
 } ump_uk_alloc_constraints;
 
 typedef enum
@@ -116,6 +116,7 @@ typedef struct _ump_uk_ion_import_s
 	u32 size;                               /**< Input and output. Requested size; input. Returned size; output */
 	ump_uk_alloc_constraints constraints;   /**< Only input to Devicedriver */
 } _ump_uk_ion_import_s;
+
 
 /**
  * SIZE_GET ([in] u32 secure_id, [out]size )

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 ARM Limited. All rights reserved.
+ * Copyright (C) 2011-2013 ARM Limited. All rights reserved.
  * 
  * This program is free software and is provided to you under the terms of the GNU General Public License version 2
  * as published by the Free Software Foundation, and any use by you of this program is subject to the terms of such GNU licence.
@@ -215,6 +215,7 @@ MALI_STATIC_INLINE void mali_pp_job_mark_sub_job_started(struct mali_pp_job *job
 {
 	/* Assert that we are marking the "first unstarted sub job" as started */
 	MALI_DEBUG_ASSERT(job->sub_jobs_started == sub_job);
+
 	job->sub_jobs_started++;
 }
 
