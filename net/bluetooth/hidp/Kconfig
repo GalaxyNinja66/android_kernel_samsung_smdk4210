@@ -1,6 +1,5 @@
 config BT_HIDP
 	tristate "HIDP protocol support"
-	depends on m
 	depends on BT && INPUT
 	select HID
 	help
