@@ -219,10 +219,10 @@ struct net_device_ops {
 						    u64 *wwn, int type);
 #endif
 };
-
+/* @daniel, define in netdevice.h backport 3.13-1
 void netdev_attach_ops(struct net_device *dev,
 		       const struct net_device_ops *ops);
-
+*/
 /**
  *	skb_queue_is_first - check if skb is the first entry in the queue
  *	@list: queue head
@@ -335,13 +335,13 @@ extern int		init_dummy_netdev(struct net_device *dev);
 	}
 
 #else
-
+/* @daniel, define in netdevice.h backport 3.13-1
 static inline void netdev_attach_ops(struct net_device *dev,
 		       const struct net_device_ops *ops)
 {
 	dev->netdev_ops = ops;
 }
-
+*/
 #define compat_pci_suspend(fn)
 #define compat_pci_resume(fn)
 
