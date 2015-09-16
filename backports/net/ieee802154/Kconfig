@@ -1,5 +1,5 @@
 config IEEE802154
-	depends on !BACKPORT_KERNEL_2_6_38
+	depends on !BACKPORT_KERNEL_3_1
 	tristate "IEEE Std 802.15.4 Low-Rate Wireless Personal Area Networks support"
 	depends on m
 	---help---
@@ -13,8 +13,9 @@ config IEEE802154
 	  compile it as modules.
 
 config IEEE802154_6LOWPAN
+	depends on !BACKPORT_KERNEL_3_5
 	tristate "6lowpan support over IEEE 802.15.4"
 	depends on m
-	depends on IEEE802154 && IPV6
+	depends on IEEE802154 && 6LOWPAN
 	---help---
-	IPv6 compression over IEEE 802.15.4.
+	  IPv6 compression over IEEE 802.15.4.

@@ -6,7 +6,7 @@ config HERMES
 	depends on WIRELESS_EXT
 	depends on WEXT_SPY
 	depends on WEXT_PRIV
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	depends on CRYPTO
 	depends on CRYPTO_MICHAEL_MIC
 	---help---
@@ -114,7 +114,7 @@ config PCI_HERMES
 config PCMCIA_HERMES
 	tristate "Hermes PCMCIA card support"
 	depends on m
-	depends on PCMCIA && HERMES
+	depends on PCMCIA && HERMES && HAS_IOPORT_MAP
 	---help---
 	  A driver for "Hermes" chipset based PCMCIA wireless adaptors, such
 	  as the Lucent WavelanIEEE/Orinoco cards and their OEM (Cabletron/
@@ -130,7 +130,7 @@ config PCMCIA_HERMES
 config PCMCIA_SPECTRUM
 	tristate "Symbol Spectrum24 Trilogy PCMCIA card support"
 	depends on m
-	depends on PCMCIA && HERMES
+	depends on PCMCIA && HERMES && HAS_IOPORT_MAP
 	---help---
 
 	  This is a driver for 802.11b cards using RAM-loadable Symbol
@@ -145,6 +145,6 @@ config ORINOCO_USB
 	tristate "Agere Orinoco USB support"
 	depends on m
 	depends on USB && HERMES
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	---help---
 	  This driver is for USB versions of the Agere Orinoco card.

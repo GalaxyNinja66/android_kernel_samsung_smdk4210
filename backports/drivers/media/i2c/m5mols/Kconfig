@@ -1,4 +1,5 @@
 config VIDEO_M5MOLS
+	depends on !BACKPORT_KERNEL_3_3
 	tristate "Fujitsu M-5MOLS 8MP sensor support"
 	depends on m
 	depends on I2C && VIDEO_V4L2 && VIDEO_V4L2_SUBDEV_API

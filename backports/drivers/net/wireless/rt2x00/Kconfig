@@ -260,7 +260,7 @@ config RT2X00_LIB
 
 config RT2X00_LIB_FIRMWARE
 	boolean
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 
 config RT2X00_LIB_CRYPTO
 	boolean

@@ -98,6 +98,11 @@ static void *vb2_dc_vaddr(void *buf_priv)
 {
 	struct vb2_dc_buf *buf = buf_priv;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
+	if (!buf->vaddr && buf->db_attach)
+		buf->vaddr = dma_buf_vmap(buf->db_attach->dmabuf);
+#endif
+
 	return buf->vaddr;
 }
 
@@ -267,6 +272,7 @@ static int vb2_dc_mmap(void *buf_priv, struct vm_area_struct *vma)
 }
 #endif /* (LINUX_VERSION_CODE < KERNEL_VERSION(3,9,0)) */
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 /*********************************************/
 /*         DMABUF ops for exporters          */
 /*********************************************/
@@ -451,7 +457,7 @@ static struct dma_buf *vb2_dc_get_dmabuf(void *buf_priv, unsigned long flags)
 	if (WARN_ON(!buf->sgt_base))
 		return NULL;
 
-	dbuf = dma_buf_export(buf, &vb2_dc_dmabuf_ops, buf->size, flags);
+	dbuf = dma_buf_export(buf, &vb2_dc_dmabuf_ops, buf->size, flags, NULL);
 	if (IS_ERR(dbuf))
 		return NULL;
 
@@ -460,6 +466,7 @@ static struct dma_buf *vb2_dc_get_dmabuf(void *buf_priv, unsigned long flags)
 
 	return dbuf;
 }
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0) */
 
 /*********************************************/
 /*       callbacks for USERPTR buffers       */
@@ -744,6 +751,7 @@ fail_buf:
 	return ERR_PTR(ret);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 /*********************************************/
 /*       callbacks for DMABUF buffers        */
 /*********************************************/
@@ -766,7 +774,7 @@ static int vb2_dc_map_dmabuf(void *mem_priv)
 
 	/* get the associated scatterlist for this buffer */
 	sgt = dma_buf_map_attachment(buf->db_attach, buf->dma_dir);
-	if (IS_ERR_OR_NULL(sgt)) {
+	if (IS_ERR(sgt)) {
 		pr_err("Error getting dmabuf scatterlist\n");
 		return -EINVAL;
 	}
@@ -782,6 +790,7 @@ static int vb2_dc_map_dmabuf(void *mem_priv)
 
 	buf->dma_addr = sg_dma_address(sgt->sgl);
 	buf->dma_sgt = sgt;
+	buf->vaddr = NULL;
 
 	return 0;
 }
@@ -801,6 +810,10 @@ static void vb2_dc_unmap_dmabuf(void *mem_priv)
 		return;
 	}
 
+	if (buf->vaddr) {
+		dma_buf_vunmap(buf->db_attach->dmabuf, buf->vaddr);
+		buf->vaddr = NULL;
+	}
 	dma_buf_unmap_attachment(buf->db_attach, sgt, buf->dma_dir);
 
 	buf->dma_addr = 0;
@@ -849,6 +862,7 @@ static void *vb2_dc_attach_dmabuf(void *alloc_ctx, struct dma_buf *dbuf,
 
 	return buf;
 }
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0) */
 
 /*********************************************/
 /*       DMA CONTIG exported functions       */
@@ -857,7 +871,9 @@ static void *vb2_dc_attach_dmabuf(void *alloc_ctx, struct dma_buf *dbuf,
 const struct vb2_mem_ops vb2_dma_contig_memops = {
 	.alloc		= vb2_dc_alloc,
 	.put		= vb2_dc_put,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 	.get_dmabuf	= vb2_dc_get_dmabuf,
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0) */
 	.cookie		= vb2_dc_cookie,
 	.vaddr		= vb2_dc_vaddr,
 	.mmap		= vb2_dc_mmap,
@@ -865,10 +881,12 @@ const struct vb2_mem_ops vb2_dma_contig_memops = {
 	.put_userptr	= vb2_dc_put_userptr,
 	.prepare	= vb2_dc_prepare,
 	.finish		= vb2_dc_finish,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0)
 	.map_dmabuf	= vb2_dc_map_dmabuf,
 	.unmap_dmabuf	= vb2_dc_unmap_dmabuf,
 	.attach_dmabuf	= vb2_dc_attach_dmabuf,
 	.detach_dmabuf	= vb2_dc_detach_dmabuf,
+#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(3,5,0) */
 	.num_users	= vb2_dc_num_users,
 };
 EXPORT_SYMBOL_GPL(vb2_dma_contig_memops);

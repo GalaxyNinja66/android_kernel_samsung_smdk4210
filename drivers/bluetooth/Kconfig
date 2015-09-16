@@ -26,11 +26,12 @@ config BT_HCIBTSDIO
 
 config BT_HCIUART
 	tristate "HCI UART driver"
+	depends on TTY
 	help
 	  Bluetooth HCI UART driver.
 	  This driver is required if you want to use Bluetooth devices with
-	  serial port interface. You will also need this driver if you have 
-	  UART based Bluetooth PCMCIA and CF devices like Xircom Credit Card 
+	  serial port interface. You will also need this driver if you have
+	  UART based Bluetooth PCMCIA and CF devices like Xircom Credit Card
 	  adapter and BrainBoxes Bluetooth PC Card.
 
 	  Say Y here to compile support for Bluetooth UART devices into the
@@ -40,17 +41,18 @@ config BT_HCIUART_H4
 	bool "UART (H4) protocol support"
 	depends on BT_HCIUART
 	help
-	  UART (H4) is serial protocol for communication between Bluetooth 
-	  device and host. This protocol is required for most Bluetooth devices 
-	  with UART interface, including PCMCIA and CF cards. 
+	  UART (H4) is serial protocol for communication between Bluetooth
+	  device and host. This protocol is required for most Bluetooth devices
+	  with UART interface, including PCMCIA and CF cards.
 
 	  Say Y here to compile support for HCI UART (H4) protocol.
 
 config BT_HCIUART_BCSP
 	bool "BCSP protocol support"
 	depends on BT_HCIUART
+	depends on BITREVERSE
 	help
-	  BCSP (BlueCore Serial Protocol) is serial protocol for communication 
+	  BCSP (BlueCore Serial Protocol) is serial protocol for communication
 	  between Bluetooth device and host. This protocol is required for non
 	  USB Bluetooth devices based on CSR BlueCore chip, including PCMCIA and
 	  CF cards.
@@ -95,7 +97,7 @@ config BT_HCIUART_3WIRE
 config BT_HCIBCM203X
 	tristate "HCI BCM203x USB driver"
 	depends on USB
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	help
 	  Bluetooth HCI BCM203x USB driver.
 	  This driver provides the firmware loading mechanism for the Broadcom
@@ -118,7 +120,7 @@ config BT_HCIBPA10X
 config BT_HCIBFUSB
 	tristate "HCI BlueFRITZ! USB driver"
 	depends on USB
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	help
 	  Bluetooth HCI BlueFRITZ! USB driver.
 	  This driver provides support for Bluetooth USB devices with AVM
@@ -144,7 +146,7 @@ config BT_HCIDTL1
 config BT_HCIBT3C
 	tristate "HCI BT3C (PC Card) driver"
 	depends on PCMCIA
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	help
 	  Bluetooth HCI BT3C (PC Card) driver.
 	  This driver provides support for Bluetooth PCMCIA devices with
@@ -199,7 +201,7 @@ config BT_MRVL
 	  The core driver to support Marvell Bluetooth devices.
 
 	  This driver is required if you want to support
-	  Marvell Bluetooth devices, such as 8688/8787/8797/8897.
+	  Marvell Bluetooth devices, such as 8688/8787/8797/8887/8897.
 
 	  Say Y here to compile Marvell Bluetooth driver
 	  into the kernel or say M to compile it as module.
@@ -207,12 +209,12 @@ config BT_MRVL
 config BT_MRVL_SDIO
 	tristate "Marvell BT-over-SDIO driver"
 	depends on BT_MRVL && MMC
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	help
 	  The driver for Marvell Bluetooth chipsets with SDIO interface.
 
 	  This driver is required if you want to use Marvell Bluetooth
-	  devices with SDIO interface. Currently SD8688/SD8787/SD8797/SD8897
+	  devices with SDIO interface. Currently SD8688/SD8787/SD8797/SD8887/SD8897
 	  chipsets are supported.
 
 	  Say Y here to compile support for Marvell BT-over-SDIO driver
@@ -221,7 +223,7 @@ config BT_MRVL_SDIO
 config BT_ATH3K
 	tristate "Atheros firmware download driver"
 	depends on BT_HCIBTUSB
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	help
 	  Bluetooth firmware download driver.
 	  This driver loads the firmware into the Atheros Bluetooth
@@ -231,7 +233,6 @@ config BT_ATH3K
 	  into the kernel or say M to compile it as module (ath3k).
 
 config BT_WILINK
-	depends on !BACKPORT_KERNEL_2_6_39
 	tristate "Texas Instruments WiLink7 driver"
 	depends on TI_ST
 	help
@@ -240,5 +241,6 @@ config BT_WILINK
 	  core driver to communicate with the BT core of the combo chip.
 
 	  Say Y here to compile support for Texas Instrument's WiLink7 driver
-	  into the kernel or say M to compile it as module.
+	  into the kernel or say M to compile it as module (btwilink).
+
 endmenu

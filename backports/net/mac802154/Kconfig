@@ -3,6 +3,10 @@ config MAC802154
 	depends on m
 	depends on IEEE802154
 	depends on CRC_CCITT
+	depends on CRYPTO_AUTHENC
+	select BACKPORT_CRYPTO_CCM
+	depends on CRYPTO_CTR
+	depends on CRYPTO_AES
 	---help---
 	  This option enables the hardware independent IEEE 802.15.4
 	  networking stack for SoftMAC devices (the ones implementing

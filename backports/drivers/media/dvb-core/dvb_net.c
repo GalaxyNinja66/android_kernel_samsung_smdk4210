@@ -179,7 +179,7 @@ static __be16 dvb_net_eth_type_trans(struct sk_buff *skb,
 	eth = eth_hdr(skb);
 
 	if (*eth->h_dest & 1) {
-		if(memcmp(eth->h_dest,dev->broadcast, ETH_ALEN)==0)
+		if(ether_addr_equal(eth->h_dest,dev->broadcast))
 			skb->pkt_type=PACKET_BROADCAST;
 		else
 			skb->pkt_type=PACKET_MULTICAST;
@@ -674,11 +674,13 @@ static void dvb_net_ule( struct net_device *dev, const u8 *buf, size_t buf_len )
 					if (priv->rx_mode != RX_MODE_PROMISC) {
 						if (priv->ule_skb->data[0] & 0x01) {
 							/* multicast or broadcast */
-							if (memcmp(priv->ule_skb->data, bc_addr, ETH_ALEN)) {
+							if (!ether_addr_equal(priv->ule_skb->data, bc_addr)) {
 								/* multicast */
 								if (priv->rx_mode == RX_MODE_MULTI) {
 									int i;
-									for(i = 0; i < priv->multi_num && memcmp(priv->ule_skb->data, priv->multi_macs[i], ETH_ALEN); i++)
+									for(i = 0; i < priv->multi_num &&
+									    !ether_addr_equal(priv->ule_skb->data,
+											      priv->multi_macs[i]); i++)
 										;
 									if (i == priv->multi_num)
 										drop = 1;
@@ -688,7 +690,7 @@ static void dvb_net_ule( struct net_device *dev, const u8 *buf, size_t buf_len )
 							}
 							/* else: broadcast */
 						}
-						else if (memcmp(priv->ule_skb->data, dev->dev_addr, ETH_ALEN))
+						else if (!ether_addr_equal(priv->ule_skb->data, dev->dev_addr))
 							drop = 1;
 						/* else: destination address matches the MAC address of our receiver device */
 					}
@@ -1159,7 +1161,7 @@ static void wq_set_multicast_list (struct work_struct *work)
 		priv->multi_num = 0;
 
 		netdev_for_each_mc_addr(ha, dev)
-			dvb_set_mc_filter(dev, mc_addr(ha));
+			dvb_set_mc_filter(dev, ha->addr);
 	}
 
 	netif_addr_unlock_bh(dev);
@@ -1241,7 +1243,7 @@ static void dvb_net_setup(struct net_device *dev)
 	ether_setup(dev);
 
 	dev->header_ops		= &dvb_header_ops;
-	netdev_attach_ops(dev, &dvb_netdev_ops);
+	dev->netdev_ops		= &dvb_netdev_ops;
 	dev->mtu		= 4096;
 
 	dev->flags |= IFF_NOARP;
@@ -1274,7 +1276,8 @@ static int dvb_net_add_if(struct dvb_net *dvbnet, u16 pid, u8 feedtype)
 	if ((if_num = get_if(dvbnet)) < 0)
 		return -EINVAL;
 
-	net = alloc_netdev(sizeof(struct dvb_net_priv), "dvb", dvb_net_setup);
+	net = alloc_netdev(sizeof(struct dvb_net_priv), "dvb",
+			   NET_NAME_UNKNOWN, dvb_net_setup);
 	if (!net)
 		return -ENOMEM;
 

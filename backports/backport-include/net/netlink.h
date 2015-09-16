@@ -87,11 +87,7 @@ static inline s8 nla_get_s8(const struct nlattr *nla)
  * @nla: s64 netlink attribute
  */
 #define nla_get_s64 LINUX_BACKPORT(nla_get_s64)
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static inline s64 nla_get_s64(const struct nlattr *nla)
-#else
-static inline s64 nla_get_s64(struct nlattr *nla)
-#endif
 {
 	s64 tmp;
 
@@ -129,5 +125,16 @@ static inline int nla_put_be64(struct sk_buff *skb, int attrtype, __be64 value)
 	return nla_put(skb, attrtype, sizeof(__be64), &value);
 }
 #endif /* < 3.5 */
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3,7,0))
+#define NLA_S8 (NLA_BINARY + 1)
+#define NLA_S16 (NLA_BINARY + 2)
+#define NLA_S32 (NLA_BINARY + 3)
+#define NLA_S64 (NLA_BINARY + 4)
+#define __NLA_TYPE_MAX (NLA_BINARY + 5)
+
+#undef NLA_TYPE_MAX
+#define NLA_TYPE_MAX (__NLA_TYPE_MAX - 1)
+#endif
 
 #endif /* __BACKPORT_NET_NETLINK_H */

@@ -93,8 +93,8 @@ static void bnep_net_set_mc_list(struct net_device *dev)
 		netdev_for_each_mc_addr(ha, dev) {
 			if (i == BNEP_MAX_MULTICAST_FILTERS)
 				break;
-			memcpy(__skb_put(skb, ETH_ALEN), mc_addr(ha), ETH_ALEN);
-			memcpy(__skb_put(skb, ETH_ALEN), mc_addr(ha), ETH_ALEN);
+			memcpy(__skb_put(skb, ETH_ALEN), ha->addr, ETH_ALEN);
+			memcpy(__skb_put(skb, ETH_ALEN), ha->addr, ETH_ALEN);
 
 			i++;
 		}
@@ -223,7 +223,7 @@ void bnep_net_setup(struct net_device *dev)
 
 	ether_setup(dev);
 	dev->priv_flags &= ~IFF_TX_SKB_SHARING;
-	netdev_attach_ops(dev, &bnep_netdev_ops);
+	dev->netdev_ops = &bnep_netdev_ops;
 
 	dev->watchdog_timeo  = HZ * 2;
 }

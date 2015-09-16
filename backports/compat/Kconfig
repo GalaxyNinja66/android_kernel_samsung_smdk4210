@@ -47,45 +47,11 @@
 #
 #
 # C) similarly, a kconfig symbol for an option, e.g.
-#    BACKPORT_OPTION_BT_SOCK_CREATE_NEEDS_KERN (see below)
+#    BACKPORT_OPTION_SOME_FIX (no examples provided) check git log
 #
 #
 # Variations are obviously possible.
 #
-
-config BACKPORT_BUILD_FW_LOADER
-	tristate
-	depends on m
-	# RHEL6, starting from 6.0, backports the FW loader already
-	depends on !BACKPORT_RHEL_KERNEL_6_0
-	depends on !FW_LOADER || BACKPORT_KERNEL_2_6_33
-	default m if BACKPORT_FW_LOADER
-	default m if BACKPORT_USERSEL_BUILD_ALL
-
-config BACKPORT_FW_LOADER
-	bool
-
-config BACKPORT_USERSEL_NET_SCH_CODEL
-	tristate "codel"
-	depends on m
-	depends on m
-	depends on !BACKPORT_KERNEL_2_6_25
-	default m if NET_SCH_CODEL=n
-	default m if BACKPORT_USERSEL_BUILD_ALL
-
-config BACKPORT_USERSEL_NET_SCH_FQ_CODEL
-	tristate "FQ codel"
-	depends on m
-	depends on m
-	depends on !BACKPORT_KERNEL_2_6_25
-	default m if NET_SCH_FQ_CODEL=n
-	default m if BACKPORT_USERSEL_BUILD_ALL
-
-config BACKPORT_BUILD_KFIFO
-	def_bool y
-	# RHEL6, starting from 6.1, backports kfifo already
-	depends on !BACKPORT_RHEL_KERNEL_6_1
-	depends on BACKPORT_KERNEL_2_6_36
 
 config BACKPORT_BUILD_CORDIC
 	tristate
@@ -93,28 +59,11 @@ config BACKPORT_BUILD_CORDIC
 	depends on !CORDIC
 	default m if BACKPORT_CORDIC
 	default m if BACKPORT_USERSEL_BUILD_ALL
+	#module-name cordic
+	#c-file lib/cordic.c
 
 config BACKPORT_CORDIC
 	bool
-
-config BACKPORT_BUILD_CRC8
-	tristate
-	depends on m
-	depends on !CRC8
-	default m if BACKPORT_CRC8
-	default m if BACKPORT_USERSEL_BUILD_ALL
-
-config BACKPORT_CRC8
-	bool
-
-config BACKPORT_BUILD_GENERIC_ATOMIC64
-	bool
-	default y if !64BIT && !GENERIC_ATOMIC64
-
-config BACKPORT_OPTION_BT_SOCK_CREATE_NEEDS_KERN
-	bool
-	# in RHEL6 (starting from 6.0), the function needs the argument
-	default y if !BACKPORT_KERNEL_2_6_33 || BACKPORT_RHEL_KERNEL_6_0
 
 config BACKPORT_BUILD_AVERAGE
 	bool
@@ -127,24 +76,7 @@ config BACKPORT_BUILD_AVERAGE
 config BACKPORT_AVERAGE
 	bool
 
-config BACKPORT_OPTION_USB_URB_THREAD_FIX
-	bool
-	default y if BACKPORT_KERNEL_2_6_36
-
 config BACKPORT_MII
-	bool
-
-config BACKPORT_BUILD_DMA_SHARED_BUFFER
-	bool
-	depends on ANON_INODES
-	depends on !BACKPORT_KERNEL_3_0
-	depends on !DMA_SHARED_BUFFER || BACKPORT_KERNEL_3_5
-	default y if BACKPORT_DMA_SHARED_BUFFER
-	default y if BACKPORT_USERSEL_BUILD_ALL
-	#h-file linux/dma-buf.h
-	#c-file drivers/base/dma-buf.c
-
-config BACKPORT_DMA_SHARED_BUFFER
 	bool
 
 config BACKPORT_BUILD_DMA_SHARED_HELPERS
@@ -160,7 +92,7 @@ config BACKPORT_BUILD_DMA_SHARED_HELPERS
 
 config BACKPORT_BUILD_LEDS
 	bool
-	depends on !NEW_LEDS || !LEDS_CLASS || !LEDS_TRIGGERS
+	depends on !NEW_LEDS || LEDS_CLASS=n || !LEDS_TRIGGERS
 	default y if BACKPORT_NEW_LEDS
 	default y if BACKPORT_LEDS_CLASS
 	default y if BACKPORT_LEDS_TRIGGERS
@@ -182,3 +114,26 @@ config BACKPORT_USERSEL_BUILD_ALL
 
 	  It's only really useful for compat testing, so
 	  you probably shouldn't enable it.
+
+config BACKPORT_CRYPTO_CCM
+	depends on CRYPTO_AEAD
+	depends on CRYPTO_CTR
+	bool
+
+config BACKPORT_BUILD_CRYPTO_CCM
+	bool
+	default n if CRYPTO_CCM
+	default y if BACKPORT_CRYPTO_CCM
+	#c-file crypto/ccm.c
+
+config BACKPORT_WANT_DEV_COREDUMP
+	bool
+
+config BACKPORT_BUILD_WANT_DEV_COREDUMP
+	depends on n
+	bool
+	default n if DEV_COREDUMP
+	default n if DISABLE_DEV_COREDUMP
+	default y if BACKPORT_WANT_DEV_COREDUMP
+	#h-file linux/devcoredump.h
+	#c-file drivers/base/devcoredump.c

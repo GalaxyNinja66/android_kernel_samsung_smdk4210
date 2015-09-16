@@ -39,29 +39,11 @@ menuconfig BT
 	  to Bluetooth kernel modules are provided in the BlueZ packages.  For
 	  more information, see <http://www.bluez.org/>.
 
-config TTY
-	bool "BT TTY support"
-
-config BT_L2CAP
-	bool "L2CAP protocol support"
-	select CRC16
-	select CRYPTO
-	select CRYPTO_BLKCIPHER
-	select CRYPTO_AES
-	select CRYPTO_ECB
+config BT_6LOWPAN
+	tristate "Bluetooth 6LoWPAN support"
+	depends on BT && 6LOWPAN
 	help
-	  L2CAP (Logical Link Control and Adaptation Protocol) provides
-	  connection oriented and connection-less data transport.  L2CAP
-	  support is required for most Bluetooth applications.
-
-	  Also included is support for SMP (Security Manager Protocol) which
-	  is the security layer on top of LE (Low Energy) links.
-
-config BT_SCO
-	bool "SCO links support"
-	help
-	  SCO link provides voice transport over Bluetooth.  SCO support is
-	  required for voice applications like Headset and Audio.
+	  IPv6 compression over Bluetooth Low Energy.
 
 source "net/bluetooth/rfcomm/Kconfig"
 
@@ -72,4 +54,3 @@ source "net/bluetooth/cmtp/Kconfig"
 source "net/bluetooth/hidp/Kconfig"
 
 source "drivers/bluetooth/Kconfig"
-

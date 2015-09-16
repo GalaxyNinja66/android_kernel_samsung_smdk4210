@@ -36,6 +36,7 @@ config BCMA_DRIVER_PCI_HOSTMODE
 	  PCI core hostmode operation (external PCI bus).
 
 config BCMA_HOST_SOC
+	depends on !BACKPORT_KERNEL_3_7
 	bool "Support for BCMA in a SoC"
 	depends on BCMA
 	help
@@ -75,10 +76,9 @@ config BCMA_DRIVER_GMAC_CMN
 	  If unsure, say N
 
 config BCMA_DRIVER_GPIO
-	depends on !BACKPORT_KERNEL_2_6_28
-	depends on !BACKPORT_KERNEL_3_0
 	bool "BCMA GPIO driver"
 	depends on BCMA && GPIOLIB
+	select IRQ_DOMAIN if BCMA_HOST_SOC
 	help
 	  Driver to provide access to the GPIO pins of the bcma bus.
 

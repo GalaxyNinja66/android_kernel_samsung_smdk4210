@@ -1,7 +1,7 @@
 config IWLEGACY
 	tristate
 	depends on m
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	select BACKPORT_NEW_LEDS
 	select BACKPORT_LEDS_CLASS
 	select BACKPORT_LEDS_TRIGGERS

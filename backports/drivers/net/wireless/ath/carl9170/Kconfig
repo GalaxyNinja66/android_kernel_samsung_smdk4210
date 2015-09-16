@@ -1,10 +1,9 @@
 config CARL9170
-	depends on !BACKPORT_KERNEL_2_6_29
 	tristate "Linux Community AR9170 802.11n USB support"
 	depends on m
 	depends on USB && MAC80211
 	select ATH_COMMON
-	select BACKPORT_FW_LOADER
+	depends on FW_LOADER
 	depends on CRC32
 	help
 	  This is another driver for the Atheros "otus" 802.11n USB devices.

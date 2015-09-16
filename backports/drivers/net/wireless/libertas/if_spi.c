@@ -93,7 +93,6 @@ static void free_if_spi_card(struct if_spi_card *card)
 		list_del(&packet->list);
 		kfree(packet);
 	}
-	spi_set_drvdata(card->spi, NULL);
 	kfree(card);
 }
 
@@ -1245,7 +1244,6 @@ static int libertas_spi_remove(struct spi_device *spi)
 	return 0;
 }
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 static int if_spi_suspend(struct device *dev)
 {
 	struct spi_device *spi = to_spi_device(dev);
@@ -1279,7 +1277,6 @@ static const struct dev_pm_ops if_spi_pm_ops = {
 	.suspend	= if_spi_suspend,
 	.resume		= if_spi_resume,
 };
-#endif
 
 static struct spi_driver libertas_spi_driver = {
 	.probe	= if_spi_probe,
@@ -1287,9 +1284,7 @@ static struct spi_driver libertas_spi_driver = {
 	.driver = {
 		.name	= "libertas_spi",
 		.owner	= THIS_MODULE,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29))
 		.pm	= &if_spi_pm_ops,
-#endif
 	},
 };
 

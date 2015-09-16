@@ -57,6 +57,7 @@ obj-$(CONFIG_CAIF)		+= caif/
 ifneq ($(CONFIG_DCB),)
 obj-y				+= dcb/
 endif
+obj-$(CONFIG_6LOWPAN)		+= 6lowpan/
 obj-$(CPTCFG_IEEE802154)	+= ieee802154/
 obj-$(CPTCFG_MAC802154)		+= mac802154/
 

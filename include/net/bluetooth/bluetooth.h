@@ -25,7 +25,6 @@
 #ifndef __BLUETOOTH_H
 #define __BLUETOOTH_H
 
-#include <linux/version.h>
 #include <linux/poll.h>
 #include <net/sock.h>
 #include <linux/seq_file.h>
@@ -34,22 +33,6 @@
 #define AF_BLUETOOTH	31
 #define PF_BLUETOOTH	AF_BLUETOOTH
 #endif
-
-// @daniel, added
-#define CPTCFG_BACKPORT_OPTION_BT_SOCK_CREATE_NEEDS_KERN
-#define CPTCFG_BT		CONFIG_BT
-#define CPTCFG_BT_L2CAP		CONFIG_BT_L2CAP
-#define CPTCFG_BT_SCO		CONFIG_BT_SCO
-#define CPTCFG_BT_RFCOMM	CONFIG_BT_RFCOMM
-#define CPTCFG_BT_RFCOMM_TTY	CONFIG_BT_RFCOMM_TTY
-#define CPTCFG_BT_BNEP		CONFIG_BT_BNEP
-#define CPTCFG_BT_BNEP_MC_FILTER	CONFIG_BT_BNEP_MC_FILTER
-#define CPTCFG_BT_BNEP_PROTO_FILTER	CONFIG_BT_BNEP_PROTO_FILTER
-#define CPTCFG_BT_HIDP	 	CONFIG_BT_HIDP
-#define CPTCFG_BT_HCIUART	y
-#define CPTCFG_BT_HCIUART_H4	y
-#define CPTCFG_BT_HCIUART_BCSP	y
-#define CPTCFG_BT_HCISMD	y
 
 /* Bluetooth versions */
 #define BLUETOOTH_VER_1_1	1
@@ -82,6 +65,7 @@ struct bt_security {
 #define BT_SECURITY_LOW		1
 #define BT_SECURITY_MEDIUM	2
 #define BT_SECURITY_HIGH	3
+#define BT_SECURITY_FIPS	4
 
 #define BT_DEFER_SETUP	7
 
@@ -132,10 +116,13 @@ struct bt_voice {
 #define BT_VOICE_TRANSPARENT			0x0003
 #define BT_VOICE_CVSD_16BIT			0x0060
 
+#define BT_SNDMTU		12
+#define BT_RCVMTU		13
+
 __printf(1, 2)
-int bt_info(const char *fmt, ...);
+void bt_info(const char *fmt, ...);
 __printf(1, 2)
-int bt_err(const char *fmt, ...);
+void bt_err(const char *fmt, ...);
 
 #define BT_INFO(fmt, ...)	bt_info(fmt "\n", ##__VA_ARGS__)
 #define BT_ERR(fmt, ...)	bt_err(fmt "\n", ##__VA_ARGS__)
@@ -273,15 +260,15 @@ struct sock *bt_accept_dequeue(struct sock *parent, struct socket *newsock);
 
 /* Skb helpers */
 struct l2cap_ctrl {
-	unsigned int	sframe:1,
-			poll:1,
-			final:1,
-			fcs:1,
-			sar:2,
-			super:2;
-	__u16		reqseq;
-	__u16		txseq;
-	__u8		retries;
+	__u8	sframe:1,
+		poll:1,
+		final:1,
+		fcs:1,
+		sar:2,
+		super:2;
+	__u16	reqseq;
+	__u16	txseq;
+	__u8	retries;
 };
 
 struct hci_dev;
@@ -297,6 +284,7 @@ struct hci_req_ctrl {
 struct bt_skb_cb {
 	__u8 pkt_type;
 	__u8 incoming;
+	__u16 opcode;
 	__u16 expect;
 	__u8 force_active;
 	struct l2cap_chan *chan;
@@ -372,4 +360,11 @@ void sco_exit(void);
 
 void bt_sock_reclassify_lock(struct sock *sk, int proto);
 
+// @daniel, from backport-include/linux/netdevice.h
+#define alloc_netdev_mqs1(sizeof_priv, name, name_assign_type, setup, txqs, rxqs) \
+	alloc_netdev_mqs(sizeof_priv, name, setup, txqs, rxqs)
+
+#define alloc_netdev1(sizeof_priv, name, name_assign_type, setup) \
+	alloc_netdev_mqs1(sizeof_priv, name, name_assign_type, setup, 1, 1)
+// @
 #endif /* __BLUETOOTH_H */

@@ -4,7 +4,22 @@
 
 #include <net/bluetooth/bluetooth.h>
 #include <net/bluetooth/hci_core.h>
+// @daniel, from backport-include/linux/device.h
+#ifndef __ATTRIBUTE_GROUPS
+#define __ATTRIBUTE_GROUPS(_name)				\
+static const struct attribute_group *_name##_groups[] = {	\
+	&_name##_group,						\
+	NULL,							\
+}
+#endif /* __ATTRIBUTE_GROUPS */
 
+#define ATTRIBUTE_GROUPS(_name)					\
+static const struct attribute_group _name##_group = {		\
+	.attrs = _name##_attrs,					\
+};								\
+static inline void init_##_name##_attrs(void) {}		\
+__ATTRIBUTE_GROUPS(_name)
+// @
 static struct class *bt_class;
 
 static inline char *link_typetostr(int type)
@@ -49,18 +64,7 @@ static struct attribute *bt_link_attrs[] = {
 	NULL
 };
 
-static struct attribute_group bt_link_group = {
-	.attrs = bt_link_attrs,
-};
-
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
-static const struct attribute_group *bt_link_groups[] = {
-#else
-static struct attribute_group *bt_link_groups[] = {
-#endif
-	&bt_link_group,
-	NULL
-};
+ATTRIBUTE_GROUPS(bt_link);
 
 static void bt_link_release(struct device *dev)
 {
@@ -186,18 +190,7 @@ static struct attribute *bt_host_attrs[] = {
 	NULL
 };
 
-static struct attribute_group bt_host_group = {
-	.attrs = bt_host_attrs,
-};
-
-#if (LINUX_VERSION_CODE > KERNEL_VERSION(2,6,31))
-static const struct attribute_group *bt_host_groups[] = {
-#else
-static struct attribute_group *bt_host_groups[] = {
-#endif
-	&bt_host_group,
-	NULL
-};
+ATTRIBUTE_GROUPS(bt_host);
 
 static void bt_host_release(struct device *dev)
 {

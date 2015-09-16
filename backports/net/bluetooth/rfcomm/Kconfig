@@ -11,7 +11,6 @@ config BT_RFCOMM
 	  compile it as module (rfcomm).
 
 config BT_RFCOMM_TTY
-	depends on !BACKPORT_KERNEL_2_6_33
 	bool "RFCOMM TTY support"
 	depends on BT_RFCOMM
 	depends on TTY

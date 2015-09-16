@@ -318,42 +318,20 @@ ath5k_bss_info_changed(struct ieee80211_hw *hw, struct ieee80211_vif *vif,
 
 static u64
 ath5k_prepare_multicast(struct ieee80211_hw *hw,
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 			struct netdev_hw_addr_list *mc_list)
-#else
-			int mc_count, struct dev_addr_list *ha)
-#endif
 {
 	u32 mfilt[2], val;
 	u8 pos;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	struct netdev_hw_addr *ha;
-#else
-	int i;
-#endif
 
 	mfilt[0] = 0;
 	mfilt[1] = 0;
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 	netdev_hw_addr_list_for_each(ha, mc_list) {
-#else
-	for (i = 0; i < mc_count; i++) {
-		if (!ha)
-			break;
-#endif
 		/* calculate XOR of eight 6-bit values */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 		val = get_unaligned_le32(ha->addr + 0);
-#else
-		val = get_unaligned_le32(ha->dmi_addr + 0);
-#endif
 		pos = (val >> 18) ^ (val >> 12) ^ (val >> 6) ^ val;
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35))
 		val = get_unaligned_le32(ha->addr + 3);
-#else
-		val = get_unaligned_le32(ha->dmi_addr + 3);
-#endif
 		pos ^= (val >> 18) ^ (val >> 12) ^ (val >> 6) ^ val;
 		pos &= 0x3f;
 		mfilt[pos / 32] |= (1 << (pos % 32));
@@ -362,9 +340,6 @@ ath5k_prepare_multicast(struct ieee80211_hw *hw,
 		* need to inform below not to reset the mcast */
 		/* ath5k_hw_set_mcast_filterindex(ah,
 		 *      ha->addr[5]); */
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35))
-		ha = ha->next;
-#endif
 	}
 
 	return ((u64)(mfilt[1]) << 32) | mfilt[0];
@@ -498,6 +473,8 @@ ath5k_configure_filter(struct ieee80211_hw *hw, unsigned int changed_flags,
 	/* Set the cached hw filter flags, this will later actually
 	 * be set in HW */
 	ah->filter_flags = rfilt;
+	/* Store current FIF filter flags */
+	ah->fif_filter_flags = *new_flags;
 
 	mutex_unlock(&ah->lock);
 }
@@ -706,6 +683,7 @@ ath5k_get_survey(struct ieee80211_hw *hw, int idx, struct survey_info *survey)
 	survey->channel = conf->chandef.chan;
 	survey->noise = ah->ah_noise_floor;
 	survey->filled = SURVEY_INFO_NOISE_DBM |
+			SURVEY_INFO_IN_USE |
 			SURVEY_INFO_CHANNEL_TIME |
 			SURVEY_INFO_CHANNEL_TIME_BUSY |
 			SURVEY_INFO_CHANNEL_TIME_RX |
@@ -726,7 +704,7 @@ ath5k_get_survey(struct ieee80211_hw *hw, int idx, struct survey_info *survey)
  * reset.
  */
 static void
-ath5k_set_coverage_class(struct ieee80211_hw *hw, u8 coverage_class)
+ath5k_set_coverage_class(struct ieee80211_hw *hw, s16 coverage_class)
 {
 	struct ath5k_hw *ah = hw->priv;
 

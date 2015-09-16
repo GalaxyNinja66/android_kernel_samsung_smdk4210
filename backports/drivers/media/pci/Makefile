@@ -7,10 +7,10 @@ obj-y        +=	ttpci/		\
 		pluto2/		\
 		dm1105/		\
 		pt1/		\
+		pt3/		\
 		mantis/		\
 		ngene/		\
 		ddbridge/	\
-		b2c2/		\
 		saa7146/
 
 obj-$(CPTCFG_VIDEO_IVTV) += ivtv/
@@ -22,5 +22,7 @@ obj-$(CPTCFG_VIDEO_CX88) += cx88/
 obj-$(CPTCFG_VIDEO_BT848) += bt8xx/
 obj-$(CPTCFG_VIDEO_SAA7134) += saa7134/
 obj-$(CPTCFG_VIDEO_SAA7164) += saa7164/
+obj-$(CPTCFG_VIDEO_TW68) += tw68/
 obj-$(CPTCFG_VIDEO_MEYE) += meye/
 obj-$(CPTCFG_STA2X11_VIP) += sta2x11/
+obj-$(CPTCFG_VIDEO_SOLO6X10) += solo6x10/

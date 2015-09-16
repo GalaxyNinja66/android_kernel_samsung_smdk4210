@@ -44,7 +44,6 @@ config ATL1
 	  will be called atl1.
 
 config ATL1E
-	depends on !BACKPORT_KERNEL_2_6_26
 	tristate "Atheros L1E Gigabit Ethernet support"
 	depends on m
 	depends on PCI
@@ -70,7 +69,6 @@ config ATL1C
 	  will be called atl1c.
 
 config ALX
-	depends on !BACKPORT_KERNEL_2_6_31
 	tristate "Qualcomm Atheros AR816x/AR817x support"
 	depends on m
 	depends on PCI
