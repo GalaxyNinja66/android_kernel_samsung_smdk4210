@@ -898,7 +898,6 @@ static int do_test(int m)
 		break;
 
 	case 28:
-
 		ret += tcrypt_test("tgr160");
 		break;
 
@@ -1032,13 +1031,18 @@ static int do_test(int m)
 	case 150:
 		ret += tcrypt_test("ansi_cprng");
 		break;
-
 #ifdef CONFIG_CRYPTO_GCM
 	case 151:
 		ret += tcrypt_test("rfc4106(gcm(aes))");
 		break;
 #endif
+	case 153:
+		ret += tcrypt_test("cmac(aes)");
+		break;
 
+	case 154:
+		ret += tcrypt_test("cmac(des3_ede)");
+		break;
 #ifdef CRYPTO_SPEED_TESTS
 	case 200:
 		test_cipher_speed("ecb(aes)", ENCRYPT, sec, NULL, 0,
