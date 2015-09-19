@@ -50,7 +50,7 @@ config BT_HCIUART_H4
 config BT_HCIUART_BCSP
 	bool "BCSP protocol support"
 	depends on BT_HCIUART
-	depends on BITREVERSE
+	select BITREVERSE
 	help
 	  BCSP (BlueCore Serial Protocol) is serial protocol for communication
 	  between Bluetooth device and host. This protocol is required for non
@@ -146,7 +146,7 @@ config BT_HCIDTL1
 config BT_HCIBT3C
 	tristate "HCI BT3C (PC Card) driver"
 	depends on PCMCIA
-	depends on FW_LOADER
+	select FW_LOADER
 	help
 	  Bluetooth HCI BT3C (PC Card) driver.
 	  This driver provides support for Bluetooth PCMCIA devices with
@@ -209,7 +209,7 @@ config BT_MRVL
 config BT_MRVL_SDIO
 	tristate "Marvell BT-over-SDIO driver"
 	depends on BT_MRVL && MMC
-	depends on FW_LOADER
+	select FW_LOADER
 	help
 	  The driver for Marvell Bluetooth chipsets with SDIO interface.
 
@@ -223,7 +223,7 @@ config BT_MRVL_SDIO
 config BT_ATH3K
 	tristate "Atheros firmware download driver"
 	depends on BT_HCIBTUSB
-	depends on FW_LOADER
+	select FW_LOADER
 	help
 	  Bluetooth firmware download driver.
 	  This driver loads the firmware into the Atheros Bluetooth
