@@ -64,6 +64,7 @@
 #define REGS_HYS		0x2 /* Write Only */
 #define REGS_CYCLE		0x3 /* Write Only */
 #define REGS_OPMOD		0x4 /* Write Only */
+#define REGS_AMP		0x5 /* Write Only */
 #define REGS_CON		0x6 /* Write Only */
 
 /* sensor type */
@@ -101,12 +102,13 @@
 #define VO_0		0x40	/* 0x40 */
 #define VO_1		0x20	/* 0x20 */
 
-static u8 reg_defaults[5] = {
+static u8 reg_defaults[6] = {
 	0x00, /* PROX: read only register */
 	0x08, /* GAIN: large LED drive level */
 	VO_0, /* HYS: receiver sensitivity */
-	0x04, /* CYCLE: */
+	0x00, /* CYCLE: */
 	0x01, /* OPMOD: normal operating mode */
+	0xC0  /* AMP: AMP bandwidth */
 };
 
 #endif
@@ -324,6 +326,7 @@ static ssize_t proximity_enable_store(struct device *dev,
 		gp2a_i2c_write(gp2a, REGS_HYS, &reg_defaults[2]);
 		gp2a_i2c_write(gp2a, REGS_CYCLE, &reg_defaults[3]);
 		gp2a_i2c_write(gp2a, REGS_OPMOD, &reg_defaults[4]);
+		gp2a_i2c_write(gp2a, REGS_AMP, &reg_defaults[5]);
 		gp2a->prox_value = 1;
 #endif
 		enable_irq(gp2a->irq);
@@ -481,7 +484,7 @@ static void gp2a_work_func_light(struct work_struct *work)
 					work_light);
 	int adc = lightsensor_get_adcvalue(gp2a);
 
-	input_report_abs(gp2a->light_input_dev, ABS_MISC, adc);
+	input_report_rel(gp2a->light_input_dev, REL_MISC, adc+1);
 	input_sync(gp2a->light_input_dev);
 }
 
@@ -762,8 +765,7 @@ static int gp2a_i2c_probe(struct i2c_client *client,
 
 	input_set_drvdata(input_dev, gp2a);
 	input_dev->name = "light_sensor";
-	input_set_capability(input_dev, EV_ABS, ABS_MISC);
-	input_set_abs_params(input_dev, ABS_MISC, 0, 1, 0, 0);
+	input_set_capability(input_dev, EV_REL, REL_MISC);
 
 	gp2a_dbgmsg("registering lightsensor-level input device\n");
 	ret = input_register_device(input_dev);
