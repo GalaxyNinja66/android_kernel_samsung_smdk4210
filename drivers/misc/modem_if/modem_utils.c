@@ -25,7 +25,6 @@
 #include <linux/udp.h>
 #include <linux/rtc.h>
 #include <linux/time.h>
-
 #include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/io.h>
@@ -66,7 +65,7 @@ void ts2utc(struct timespec *ts, struct utc_time *utc)
 	utc->hour = tm.tm_hour;
 	utc->min = tm.tm_min;
 	utc->sec = tm.tm_sec;
-	utc->msec = (ts->tv_nsec > 0) ? (ts->tv_nsec / 1000000) : 0;
+	utc->msec = ns2ms(ts->tv_nsec);
 }
 
 void get_utc_time(struct utc_time *utc)
@@ -75,43 +74,6 @@ void get_utc_time(struct utc_time *utc)
 	getnstimeofday(&ts);
 	ts2utc(&ts, utc);
 }
-
-#ifdef CONFIG_LINK_DEVICE_DPRAM
-#include "modem_link_device_dpram.h"
-int mif_dump_dpram(struct io_device *iod)
-{
-	struct link_device *ld = get_current_link(iod);
-	struct dpram_link_device *dpld = to_dpram_link_device(ld);
-	u32 size = dpld->size;
-	unsigned long read_len = 0;
-	struct sk_buff *skb;
-	char *buff;
-
-	buff = kzalloc(size, GFP_ATOMIC);
-	if (!buff) {
-		mif_err("ERR! kzalloc fail\n");
-		return -ENOMEM;
-	} else {
-		dpld->dpram_dump(ld, buff);
-	}
-
-	while (read_len < size) {
-		skb = alloc_skb(MAX_IPC_SKB_SIZE, GFP_ATOMIC);
-		if (!skb) {
-			mif_err("ERR! alloc_skb fail\n");
-			kfree(buff);
-			return -ENOMEM;
-		}
-		memcpy(skb_put(skb, MAX_IPC_SKB_SIZE),
-			buff + read_len, MAX_IPC_SKB_SIZE);
-		skb_queue_tail(&iod->sk_rx_q, skb);
-		read_len += MAX_IPC_SKB_SIZE;
-		wake_up(&iod->wq);
-	}
-	kfree(buff);
-	return 0;
-}
-#endif
 
 int mif_dump_log(struct modem_shared *msd, struct io_device *iod)
 {
@@ -271,15 +233,23 @@ static inline int dump2hex(char *buff, const char *data, size_t len)
 	return dest - buff;
 }
 
-void pr_ipc(const char *tag, const char *data, size_t len)
+void pr_ipc(int level, const char *tag, const char *data, size_t len)
 {
 	struct utc_time utc;
 	unsigned char str[128];
 
+	if (level < 0)
+		return;
+
 	get_utc_time(&utc);
 	dump2hex(str, data, (len > 32 ? 32 : len));
-	pr_info("%s: %s: [%02d:%02d:%02d.%03d] %s\n",
-		MIF_TAG, tag, utc.hour, utc.min, utc.sec, utc.msec, str);
+	if (level > 0) {
+		pr_err("%s: %s: [%02d:%02d:%02d.%03d] %s\n", MIF_TAG, tag,
+			utc.hour, utc.min, utc.sec, utc.msec, str);
+	} else {
+		pr_info("%s: %s: [%02d:%02d:%02d.%03d] %s\n", MIF_TAG, tag,
+			utc.hour, utc.min, utc.sec, utc.msec, str);
+	}
 }
 
 /* print buffer as hex string */
@@ -691,8 +661,8 @@ void print_sipc4_hdlc_fmt_frame(const u8 *psrc)
 	u8 *frm;			/* HDLC Frame	*/
 	struct fmt_hdr *hh;		/* HDLC Header	*/
 	struct sipc_fmt_hdr *fh;	/* IPC Header	*/
-	u16 hh_len = sizeof(struct fmt_hdr);
-	u16 fh_len = sizeof(struct sipc_fmt_hdr);
+	int hh_len = sizeof(struct fmt_hdr);
+	int fh_len = sizeof(struct sipc_fmt_hdr);
 	u8 *data;
 	int dlen;
 
@@ -729,7 +699,7 @@ void print_sipc4_hdlc_fmt_frame(const u8 *psrc)
 void print_sipc4_fmt_frame(const u8 *psrc)
 {
 	struct sipc_fmt_hdr *fh = (struct sipc_fmt_hdr *)psrc;
-	u16 fh_len = sizeof(struct sipc_fmt_hdr);
+	int fh_len = sizeof(struct sipc_fmt_hdr);
 	u8 *data;
 	int dlen;
 
@@ -756,8 +726,8 @@ void print_sipc5_link_fmt_frame(const u8 *psrc)
 	u8 *lf;				/* Link Frame	*/
 	struct sipc5_link_hdr *lh;	/* Link Header	*/
 	struct sipc_fmt_hdr *fh;	/* IPC Header	*/
-	u16 lh_len;
-	u16 fh_len;
+	int lh_len;
+	int fh_len;
 	u8 *data;
 	int dlen;
 
@@ -765,10 +735,7 @@ void print_sipc5_link_fmt_frame(const u8 *psrc)
 
 	/* Point HDLC header and IPC header */
 	lh = (struct sipc5_link_hdr *)lf;
-	if (lh->cfg & SIPC5_CTL_FIELD_EXIST)
-		lh_len = SIPC5_HEADER_SIZE_WITH_CTL_FLD;
-	else
-		lh_len = SIPC5_MIN_HEADER_SIZE;
+	lh_len = (u16)sipc5_get_hdr_len((u8 *)lh);
 	fh = (struct sipc_fmt_hdr *)(lf + lh_len);
 	fh_len = sizeof(struct sipc_fmt_hdr);
 
@@ -1069,124 +1036,203 @@ bool is_syn_packet(const u8 *ip_pkt)
 		return false;
 }
 
-int memcmp16_to_io(const void __iomem *to, void *from, int size)
+/**
+ * mif_register_isr
+ * @irq: IRQ number for a DPRAM interrupt
+ * @isr: function pointer to an interrupt service routine
+ * @flags: set of interrupt flags
+ * @name: name of the interrupt
+ * @data: pointer to a data for @isr
+ *
+ * Registers the ISR for the IRQ number.
+ */
+int mif_register_isr(unsigned int irq, irq_handler_t isr, unsigned long flags,
+			const char *name, void *data)
 {
-	u16 *d = (u16 *)to;
-	u16 *s = (u16 *)from;
-	int count = size >> 1;
-	int diff = 0;
-	int i;
-	u16 d1;
-	u16 s1;
+	int ret;
 
-	for (i = 0; i < count; i++) {
-		d1 = ioread16(d);
-		s1 = *s;
-		if (d1 != s1) {
-			diff++;
-			mif_err("ERR! [%d] d:0x%04X != s:0x%04X\n", i, d1, s1);
-		}
-		d++;
-		s++;
+	ret = request_irq(irq, isr, flags, name, data);
+	if (ret) {
+		mif_info("%s: ERR! request_irq fail (err %d)\n", name, ret);
+		return ret;
 	}
 
-	return diff;
+	ret = enable_irq_wake(irq);
+	if (ret)
+		mif_info("%s: ERR! enable_irq_wake fail (err %d)\n", name, ret);
+
+	mif_info("%s (#%d) handler registered\n", name, irq);
+
+	return 0;
 }
 
-int mif_test_dpram(char *dp_name, u8 __iomem *start, u32 size)
+int mif_test_dpram(char *dp_name, void __iomem *start, u16 bytes)
 {
-	u8 __iomem *dst;
-	int i;
+	u16 i;
+	u16 words = bytes >> 1;
+	u16 __iomem *dst = (u16 __iomem *)start;
 	u16 val;
+	int err_cnt = 0;
 
-	mif_info("%s: start = 0x%p, size = %d\n", dp_name, start, size);
+	mif_err("%s: start 0x%p, bytes %d\n", dp_name, start, bytes);
 
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
-		iowrite16((i & 0xFFFF), dst);
-		dst += 2;
-	}
-
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
+	mif_err("%s: 0/6 stage ...\n", dp_name);
+	for (i = 1; i <= 100; i++) {
+		iowrite16(0x1234, dst);
 		val = ioread16(dst);
-		if (val != (i & 0xFFFF)) {
-			mif_info("%s: ERR! dst[%d] 0x%04X != 0x%04X\n",
-				dp_name, i, val, (i & 0xFFFF));
-			return -EINVAL;
+		if (val != 0x1234) {
+			mif_err("%s: [0x0000] read 0x%04X != written 0x1234 "
+				"(try# %d)\n", dp_name, val, i);
+			err_cnt++;
 		}
-		dst += 2;
 	}
 
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
+	if (err_cnt > 0) {
+		mif_err("%s: FAIL!!!\n", dp_name);
+		return -EINVAL;
+	}
+
+	mif_err("%s: 1/6 stage ...\n", dp_name);
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
+		iowrite16(0, dst);
+		dst++;
+	}
+
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
+		val = ioread16(dst);
+		if (val != 0x0000) {
+			mif_err("%s: ERR! [0x%04X] read 0x%04X != written "
+				"0x0000\n", dp_name, i, val);
+			err_cnt++;
+		}
+		dst++;
+	}
+
+	if (err_cnt > 0) {
+		mif_err("%s: FAIL!!!\n", dp_name);
+		return -EINVAL;
+	}
+
+	mif_err("%s: 2/6 stage ...\n", dp_name);
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
+		iowrite16(0xFFFF, dst);
+		dst++;
+	}
+
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
+		val = ioread16(dst);
+		if (val != 0xFFFF) {
+			mif_err("%s: ERR! [0x%04X] read 0x%04X != written "
+				"0xFFFF\n", dp_name, i, val);
+			err_cnt++;
+		}
+		dst++;
+	}
+
+	if (err_cnt > 0) {
+		mif_err("%s: FAIL!!!\n", dp_name);
+		return -EINVAL;
+	}
+
+	mif_err("%s: 3/6 stage ...\n", dp_name);
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
 		iowrite16(0x00FF, dst);
-		dst += 2;
+		dst++;
 	}
 
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
 		val = ioread16(dst);
 		if (val != 0x00FF) {
-			mif_info("%s: ERR! dst[%d] 0x%04X != 0x00FF\n",
-				dp_name, i, val);
-			return -EINVAL;
+			mif_err("%s: ERR! [0x%04X] read 0x%04X != written "
+				"0x00FF\n", dp_name, i, val);
+			err_cnt++;
 		}
-		dst += 2;
+		dst++;
 	}
 
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
+	if (err_cnt > 0) {
+		mif_err("%s: FAIL!!!\n", dp_name);
+		return -EINVAL;
+	}
+
+	mif_err("%s: 4/6 stage ...\n", dp_name);
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
 		iowrite16(0x0FF0, dst);
-		dst += 2;
+		dst++;
 	}
 
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
 		val = ioread16(dst);
 		if (val != 0x0FF0) {
-			mif_info("%s: ERR! dst[%d] 0x%04X != 0x0FF0\n",
-				dp_name, i, val);
-			return -EINVAL;
+			mif_err("%s: ERR! [0x%04X] read 0x%04X != written "
+				"0x0FF0\n", dp_name, i, val);
+			err_cnt++;
 		}
-		dst += 2;
+		dst++;
 	}
 
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
+	if (err_cnt > 0) {
+		mif_err("%s: FAIL!!!\n", dp_name);
+		return -EINVAL;
+	}
+
+	mif_err("%s: 5/6 stage ...\n", dp_name);
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
 		iowrite16(0xFF00, dst);
-		dst += 2;
+		dst++;
 	}
 
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
 		val = ioread16(dst);
 		if (val != 0xFF00) {
-			mif_info("%s: ERR! dst[%d] 0x%04X != 0xFF00\n",
-				dp_name, i, val);
-			return -EINVAL;
+			mif_err("%s: ERR! [0x%04X] read 0x%04X != written "
+				"0xFF00\n", dp_name, i, val);
+			err_cnt++;
 		}
-		dst += 2;
+		dst++;
 	}
 
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
-		iowrite16(0, dst);
-		dst += 2;
+	mif_err("%s: 6/6 stage ...\n", dp_name);
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
+		iowrite16((i & 0xFFFF), dst);
+		dst++;
 	}
 
-	dst = start;
-	for (i = 0; i < (size >> 1); i++) {
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
 		val = ioread16(dst);
-		if (val != 0) {
-			mif_info("%s: ERR! dst[%d] 0x%04X != 0\n",
-				dp_name, i, val);
-			return -EINVAL;
+		if (val != (i & 0xFFFF)) {
+			mif_err("%s: ERR! [0x%04X] read 0x%04X != written "
+				"0x%04X\n", dp_name, i, val, (i & 0xFFFF));
+			err_cnt++;
 		}
-		dst += 2;
+		dst++;
 	}
 
-	mif_info("%s: PASS!!!\n", dp_name);
+	if (err_cnt > 0) {
+		mif_err("%s: FAIL!!!\n", dp_name);
+		return -EINVAL;
+	}
+
+	mif_err("%s: PASS!!!\n", dp_name);
+
+	dst = (u16 __iomem *)start;
+	for (i = 0; i < words; i++) {
+		iowrite16(0, dst);
+		dst++;
+	}
+
 	return 0;
 }
 

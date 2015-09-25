@@ -34,6 +34,7 @@
 #include <linux/wakelock.h>
 
 #include <linux/platform_data/modem.h>
+#include <mach/c2c.h>
 #include "modem_prj.h"
 #include "modem_variation.h"
 #include "modem_utils.h"
@@ -77,27 +78,31 @@ static struct modem_shared *create_modem_shared_data(void)
 static struct modem_ctl *create_modemctl_device(struct platform_device *pdev,
 		struct modem_shared *msd)
 {
-	int ret = 0;
-	struct modem_data *pdata;
+	struct modem_data *pdata = pdev->dev.platform_data;
 	struct modem_ctl *modemctl;
-	struct device *dev = &pdev->dev;
+	int ret = 0;
 
 	/* create modem control device */
 	modemctl = kzalloc(sizeof(struct modem_ctl), GFP_KERNEL);
-	if (!modemctl)
+	if (!modemctl) {
+		mif_err("%s: modemctl kzalloc fail\n", pdata->name);
+		mif_err("%s: xxx\n", pdata->name);
 		return NULL;
+	}
 
 	modemctl->msd = msd;
-	modemctl->dev = dev;
+	modemctl->dev = &pdev->dev;
 	modemctl->phone_state = STATE_OFFLINE;
 
-	pdata = pdev->dev.platform_data;
 	modemctl->mdm_data = pdata;
 	modemctl->name = pdata->name;
 
 	/* init modemctl device for getting modemctl operations */
 	ret = call_modem_init_func(modemctl, pdata);
 	if (ret) {
+		mif_err("%s: call_modem_init_func fail (err %d)\n",
+			pdata->name, ret);
+		mif_err("%s: xxx\n", pdata->name);
 		kfree(modemctl);
 		return NULL;
 	}
@@ -140,7 +145,7 @@ static struct io_device *create_io_device(struct modem_io_t *io_t,
 		modemctl->iod = iod;
 	if (iod->format == IPC_BOOT) {
 		modemctl->bootd = iod;
-		mif_info("Bood device = %s\n", iod->name);
+		mif_err("BOOT device = %s\n", iod->name);
 	}
 
 	/* link between io device and modem shared */
@@ -161,7 +166,7 @@ static struct io_device *create_io_device(struct modem_io_t *io_t,
 		return NULL;
 	}
 
-	mif_debug("%s is created!!!\n", iod->name);
+	mif_err("%s is created\n", iod->name);
 	return iod;
 }
 
@@ -169,7 +174,6 @@ static int attach_devices(struct io_device *iod, enum modem_link tx_link)
 {
 	struct modem_shared *msd = iod->msd;
 	struct link_device *ld;
-	unsigned ch;
 
 	/* find link type for this io device */
 	list_for_each_entry(ld, &msd->link_dev_list, list) {
@@ -237,19 +241,19 @@ static int __devinit modem_probe(struct platform_device *pdev)
 	struct modem_ctl *modemctl = NULL;
 	struct io_device *iod[pdata->num_iodevs];
 	struct link_device *ld;
+	mif_err("%s: +++\n", pdata->name);
 
-	mif_err("%s\n", pdev->name);
 	memset(iod, 0, sizeof(iod));
 
 	msd = create_modem_shared_data();
 	if (!msd) {
-		mif_err("msd == NULL\n");
+		mif_err("%s: msd == NULL\n", pdata->name);
 		goto err_free_modemctl;
 	}
 
 	modemctl = create_modemctl_device(pdev, msd);
 	if (!modemctl) {
-		mif_err("modemctl == NULL\n");
+		mif_err("%s: modemctl == NULL\n", pdata->name);
 		goto err_free_modemctl;
 	}
 
@@ -262,7 +266,7 @@ static int __devinit modem_probe(struct platform_device *pdev)
 			if (!ld)
 				goto err_free_modemctl;
 
-			mif_err("link created: %s\n", ld->name);
+			mif_err("%s: %s link created\n", pdata->name, ld->name);
 			ld->link_type = i;
 			ld->mc = modemctl;
 			ld->msd = msd;
@@ -275,7 +279,7 @@ static int __devinit modem_probe(struct platform_device *pdev)
 		iod[i] = create_io_device(&pdata->iodevs[i], msd, modemctl,
 				pdata);
 		if (!iod[i]) {
-			mif_err("iod[%d] == NULL\n", i);
+			mif_err("%s: iod[%d] == NULL\n", pdata->name, i);
 			goto err_free_modemctl;
 		}
 
@@ -284,8 +288,7 @@ static int __devinit modem_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, modemctl);
 
-	mif_err("Complete!!!\n");
-
+	mif_err("%s: ---\n", pdata->name);
 	return 0;
 
 err_free_modemctl:
@@ -299,6 +302,7 @@ err_free_modemctl:
 	if (msd != NULL)
 		kfree(msd);
 
+	mif_err("%s: xxx\n", pdata->name);
 	return -ENOMEM;
 }
 
@@ -318,21 +322,35 @@ static void modem_shutdown(struct platform_device *pdev)
 
 static int modem_suspend(struct device *pdev)
 {
-#ifndef CONFIG_SAMSUNG_PRODUCT_SHIP
-	struct utc_time utc;
-#endif
-
-#ifndef CONFIG_LINK_DEVICE_HSIC
 	struct modem_ctl *mc = dev_get_drvdata(pdev);
+	int cp_status;
+	int cnt = 0;
 
-	if (mc->gpio_pda_active) {
+#if !defined(CONFIG_LINK_DEVICE_HSIC) && !defined(CONFIG_LINK_DEVICE_C2C)
+	if (mc->gpio_pda_active)
 		gpio_set_value(mc->gpio_pda_active, 0);
-#ifndef CONFIG_SAMSUNG_PRODUCT_SHIP
-		get_utc_time(&utc);
-		mif_info("%s: at [%02d:%02d:%02d.%03d]\n",
-			mc->name, utc.hour, utc.min, utc.sec, utc.msec);
 #endif
+
+#ifdef CONFIG_LINK_DEVICE_C2C
+	while (1) {
+		cp_status = gpio_get_value(mc->gpio_cp_status);
+		if (!cp_status)
+			break;
+
+		if (cnt >= 100) {
+			mif_err("ERR! gpio_cp_status = 1 (cnt %d)\n", cnt);
+			return -EACCES;
+		} else {
+			if ((cnt%20) == 0)
+				mif_info("gpio_cp_status = 1 (cnt %d)\n", cnt);
+
+			usleep_range(100, 200);
+		}
+		cnt++;
 	}
+	gpio_set_value(mc->gpio_ap_status, 0);
+
+	c2c_suspend();
 #endif
 
 	return 0;
@@ -340,21 +358,18 @@ static int modem_suspend(struct device *pdev)
 
 static int modem_resume(struct device *pdev)
 {
-#ifndef CONFIG_SAMSUNG_PRODUCT_SHIP
-	struct utc_time utc;
-#endif
-
-#ifndef CONFIG_LINK_DEVICE_HSIC
 	struct modem_ctl *mc = dev_get_drvdata(pdev);
 
-	if (mc->gpio_pda_active) {
+#if !defined(CONFIG_LINK_DEVICE_HSIC) && !defined(CONFIG_LINK_DEVICE_C2C)
+	if (mc->gpio_pda_active)
 		gpio_set_value(mc->gpio_pda_active, 1);
-#ifndef CONFIG_SAMSUNG_PRODUCT_SHIP
-		get_utc_time(&utc);
-		mif_info("%s: at [%02d:%02d:%02d.%03d]\n",
-			mc->name, utc.hour, utc.min, utc.sec, utc.msec);
 #endif
-	}
+
+#ifdef CONFIG_LINK_DEVICE_C2C
+	c2c_resume();
+	udelay(1000);
+
+	gpio_set_value(mc->gpio_ap_status, 1);
 #endif
 
 	return 0;
