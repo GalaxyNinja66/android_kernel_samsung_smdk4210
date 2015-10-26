@@ -3028,6 +3028,35 @@ static struct max8997_platform_data exynos4_max8997_info = {
 #endif
 	.register_buck1_dvs_funcs = max8997_register_buck1dvs_funcs,
 };
+
+int cpufreq_stats_platform_cpu_power_read_tables(int cpunum, u32 *out_values, size_t num)
+{
+	static const u32 powerVals[] = {554000, 821000, 1137000, 1400000, 1700000, 2000000, 2300000};
+	static const u32 cpuWeights[2] = {16384, 8847};
+	int i, numVals = sizeof(powerVals) / sizeof(*powerVals), numCpus = sizeof(cpuWeights) / sizeof(*cpuWeights);
+
+	/*
+	 * Our data source (power_profile.xml) only gives us values for 1st core,
+	 * and not per core as requested, so we weigh these. With weights: 100%, 54%.
+    * This is the same thing as what hammerhead does (for 1st and last core), for
+	 * better or worse.
+	 */
+
+	if (num > numVals) {
+		pr_err("cpufreq_stats_platform_cpu_power_read_tables asked for too many values (wanted %u have %u)\n", (int)num, numVals);
+		return -1;
+	}
+
+	if (cpunum > numCpus) {
+		pr_err("cpufreq_stats_platform_cpu_power_read_tables asked for too many CPUs (wanted %u have %u)\n", cpunum, numCpus);
+		return -2;
+	}
+
+	for (i = 0; i < num; i++)
+		*out_values++ = powerVals[i] * cpuWeights[cpunum] >> 14;
+
+	return 0;
+}
 #endif /* CONFIG_REGULATOR_MAX8997 */
 
 
