@@ -61,12 +61,15 @@
 #define ATH6KL_HTC_ALIGN_BYTES 3
 
 /* MAX_HI_COOKIE_NUM are reserved for high priority traffic */
-#define MAX_DEF_COOKIE_NUM                720
+#define MAX_DEF_COOKIE_NUM              360
 /* Reserved for data sync cmd to avoid htc dead lock */
-#define DATA_SYNC_RESERVED                10
-/* 10% of MAX_COOKIE_NUM(18) + DATA_SYNC_RESERVED(10) */
-#define MAX_HI_COOKIE_NUM                 28
-#define MAX_COOKIE_NUM                 (MAX_DEF_COOKIE_NUM + MAX_HI_COOKIE_NUM)
+#define DATA_SYNC_RESERVED              12
+/* In htc.c ath6kl_htc_conn_service():
+ * 1. DATA_SYNC_RESERVED is in seperate case
+ * 2. MAX_HI_COOKIE_NUM is default. There are 5 cases, only 2 cases are handled
+ */
+#define MAX_HI_COOKIE_NUM               36
+#define MAX_COOKIE_NUM		(MAX_DEF_COOKIE_NUM+MAX_HI_COOKIE_NUM*3+DATA_SYNC_RESERVED)
 #define WMI_MAX_COOKIE_NUM                80
 
 #define MAX_DEFAULT_SEND_QUEUE_DEPTH      (MAX_DEF_COOKIE_NUM / WMM_NUM_AC)
