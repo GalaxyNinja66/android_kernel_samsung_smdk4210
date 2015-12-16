@@ -766,9 +766,6 @@ void ath6kl_tx_complete(void *context, struct list_head *packet_queue)
 
 		ar->tx_pending[eid]--;
 
-		if (eid != ar->ctrl_ep)
-			ar->total_tx_data_pend--;
-
 		if (eid == ar->ctrl_ep) {
 			if (test_bit(WMI_CTRL_EP_FULL, &ar->flag))
 				clear_bit(WMI_CTRL_EP_FULL, &ar->flag);
@@ -778,6 +775,8 @@ void ath6kl_tx_complete(void *context, struct list_head *packet_queue)
 			ctrl_ep = true;
 
 		} else {
+			ar->total_tx_data_pend--;
+
 			if_idx = wmi_data_hdr_get_if_idx(
 					(struct wmi_data_hdr *) packet->buf);
 
@@ -816,8 +815,6 @@ void ath6kl_tx_complete(void *context, struct list_head *packet_queue)
 			if (test_bit(NETQ_STOPPED, &vif->flags))
 				clear_bit(NETQ_STOPPED, &vif->flags);
 		}
-
-
 		ath6kl_free_cookie(ar, ath6kl_cookie, eid == ar->ctrl_ep);
 	}
 
