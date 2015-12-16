@@ -43,9 +43,7 @@ ath6kl-y += softmac.o
 ath6kl-y += regd.o
 ath6kl-y += wmiconfig.o
 ath6kl-y += recovery.o
-ath6kl-$(CONFIG_MACH_PX) += softmac.o
 ath6kl-$(CONFIG_NL80211_TESTMODE) += testmode.o
-ath6kl-$(CONFIG_ATH6KL_SDIO) += sdio.o
 ath6kl-$(CONFIG_ATH6KL_USB) += usb.o
 
 ccflags-y += -D__CHECK_ENDIAN__
