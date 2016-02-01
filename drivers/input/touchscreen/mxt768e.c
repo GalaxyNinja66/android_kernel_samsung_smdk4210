@@ -11,6 +11,7 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
  *
+ *  Add double tap wakeup : 2016/1/30 daniel_hk (daniel.p6800@gmail.com)
  */
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
@@ -296,6 +297,100 @@ static u8	*object_type_name[60] = {
 	[57]	= "SPT_GENERICDATA_T57",
 };
 #endif
+
+/* dt2wake */
+extern void dt2wake_setdev(struct input_dev * input_device);
+static struct input_dev *dt2wake_pwrdev;
+static DEFINE_MUTEX(dt2w_lock);
+static int dt2w_switch = 0;
+static int dt2w_switch_stored = 0;
+static bool dt2w_changed = false;
+static bool scr_suspended = false;
+static unsigned long dt2w_time[2] = {0, 0};
+static unsigned int dt2w_x[2] = {0, 0};
+static unsigned int dt2w_y[2] = {0, 0};
+static unsigned int last_x = 0;
+static unsigned int last_y = 0;
+static unsigned int dt_delta_limit = 30;
+static unsigned int dt_timeout = 50;
+#define DT2W_TIMEOUT_MAX 200
+#define DT2W_TIMEOUT_MIN 10
+#define DT2W_DELTA_MAX 100
+#define DT2W_DELTA_MIN 5
+
+void dt2wake_setdev(struct input_dev * input_device) {
+	dt2wake_pwrdev = input_device;
+	return;
+}
+
+EXPORT_SYMBOL(dt2wake_setdev);
+
+static void reset_dt2wake(void)
+{
+	dt2w_x[0] = 0;
+	dt2w_x[1] = 0;
+	dt2w_y[0] = 0;
+	dt2w_y[1] = 0;
+	dt2w_time[0] = 0;
+	dt2w_time[1] = 0;
+}
+
+static void dt2wake_presspwr(struct work_struct *dt2wake_presspwr_work)
+{
+	reset_dt2wake();
+	// emulate power button press
+	input_event(dt2wake_pwrdev, EV_KEY, KEY_POWER, 1);
+	input_event(dt2wake_pwrdev, EV_SYN, 0, 0);
+	msleep(50);
+	input_event(dt2wake_pwrdev, EV_KEY, KEY_POWER, 0);
+	input_event(dt2wake_pwrdev, EV_SYN, 0, 0);
+	msleep(25);
+	mutex_unlock(&dt2w_lock);
+}
+
+static DECLARE_WORK(dt2wake_presspwr_work, dt2wake_presspwr);
+
+void dt2wake_pwrtrigger(void)
+{
+	if (mutex_trylock(&dt2w_lock))
+		schedule_work(&dt2wake_presspwr_work);
+}
+
+void doubletap_wake_func(int x, int y)
+{
+	//printk("dt2w x=%d y=%d\n", x, y);
+
+	if (x >= 0) {
+
+		last_x = x;
+		last_y = y;
+	}
+
+	if (x < 0) {
+		dt2w_x[1] = dt2w_x[0];
+		dt2w_x[0] = last_x;
+		dt2w_y[1] = dt2w_y[0];
+		dt2w_y[0] = last_y;
+
+		dt2w_time[1] = dt2w_time[0];
+		dt2w_time[0] = jiffies;
+
+		//printk("dt2w x0=%d x1=%d time0=%lu time1=%lu\n", dt2w_x[0], dt2w_x[1], dt2w_time[0], dt2w_time[1]);
+
+		if ((dt2w_time[0] - dt2w_time[1]) < dt_timeout) {
+
+			if ((abs(dt2w_x[0]-dt2w_x[1]) < dt_delta_limit) &&
+			    (abs(dt2w_y[0]-dt2w_y[1]) < dt_delta_limit)) {
+        	                //printk("dt2w OFF->ON\n");
+				reset_dt2wake();
+				dt2wake_pwrtrigger();
+			}
+		}
+	}
+
+        return;
+}
+/* end dt2wake */
 
 /* declare function proto type */
 static void mxt_ta_probe(int ta_status);
@@ -1125,6 +1220,8 @@ static void report_input_data(struct mxt_data *data)
 					data->fingers[i].z);
 			input_report_abs(data->input_dev, ABS_MT_PRESSURE,
 					 data->fingers[i].w);
+			if (dt2w_switch && scr_suspended)
+				doubletap_wake_func(data->fingers[i].x, data->fingers[i].y);
 		}
 		#ifdef _SUPPORT_SHAPE_TOUCH_
 		input_report_abs(data->input_dev, ABS_MT_COMPONENT,
@@ -1184,8 +1281,10 @@ static void report_input_data(struct mxt_data *data)
 
 	if (count)
 		touch_is_pressed = 1;
-	else
+	else {
 		touch_is_pressed = 0;
+		if (dt2w_switch && scr_suspended) doubletap_wake_func(-1, -1);
+	}
 
 #if TOUCH_BOOSTER
 	if (count == 0) {
@@ -1464,7 +1563,7 @@ static int mxt_internal_suspend(struct mxt_data *data)
 		touch_cpu_lock_status = 0;
 	}
 #endif
-	data->power_off();
+	if(!dt2w_switch) data->power_off();
 
 	return 0;
 }
@@ -1489,10 +1588,16 @@ static void mxt_early_suspend(struct early_suspend *h)
 		pr_info("%s\n", __func__);
 		mxt_enabled = 0;
 		touch_is_pressed = 0;
-		disable_irq(data->client->irq);
+		if (dt2w_switch) {
+			enable_irq_wake(data->client->irq);
+		} else {
+			disable_irq(data->client->irq);
+		}
 		mxt_internal_suspend(data);
 	} else
 		pr_err("%s. but touch already off\n", __func__);
+
+	scr_suspended = true;
 }
 
 static void mxt_late_resume(struct early_suspend *h)
@@ -1517,9 +1622,20 @@ static void mxt_late_resume(struct early_suspend *h)
 		treat_median_error_status = 0;
 		tchcount_aft_median_error = 0;
 
-		enable_irq(data->client->irq);
+		if (dt2w_switch) {
+			disable_irq_wake(data->client->irq);
+		} else {
+			enable_irq(data->client->irq);
+		}
+
+		if (dt2w_changed) {
+			dt2w_switch = dt2w_switch_stored;
+			dt2w_changed = false;
+		}
 	} else
 		pr_err("%s. but touch already on\n", __func__);
+
+	scr_suspended = false;
 }
 #else
 static int mxt_suspend(struct device *dev)
@@ -3172,6 +3288,132 @@ static ssize_t command_backup_store(struct device *dev,
 }
 #endif
 
+/* dt2wake sysfs */
+static ssize_t mxt_doubletap_wake_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	size_t count = 0;
+
+	if (dt2w_switch == dt2w_switch_stored)
+		count += sprintf(buf, "%d\n", dt2w_switch);
+	else
+		count += sprintf(buf, "%d->%d\n", dt2w_switch, dt2w_switch_stored);
+
+	return count;
+}
+
+static ssize_t mxt_doubletap_wake_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	if (buf[0] >= '0' && buf[0] <= '1' && buf[1] == '\n')
+		if (dt2w_switch != buf[0] - '0') {
+			dt2w_switch_stored = buf[0] - '0';
+			if (!scr_suspended)
+				dt2w_switch = dt2w_switch_stored;
+			else
+				dt2w_changed = true;
+		}
+
+	return count;
+}
+
+static ssize_t mxt_dt_delta_limit_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	size_t count = 0;
+
+	count += sprintf(buf, "%d\n", dt_delta_limit);
+
+	return count;
+}
+
+static ssize_t mxt_dt_delta_limit_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	int val = atoi(buf);
+
+	if (!val) {
+		printk("%s:invalid dt_delta_limit value!! should be (%d..%d)", __func__, DT2W_DELTA_MIN, DT2W_DELTA_MAX);
+		return 0;
+	}
+	if (val > DT2W_DELTA_MAX)
+		val = DT2W_DELTA_MAX;
+	else if (val < DT2W_DELTA_MIN)
+		val = DT2W_DELTA_MIN;
+
+	dt_delta_limit = val;
+
+	return count;
+}
+static ssize_t mxt_dt_timeout_show(struct device *dev, struct device_attribute *attr, char *buf)
+{
+	size_t count = 0;
+
+	count += sprintf(buf, "%d\n", dt_timeout);
+
+	return count;
+}
+
+static ssize_t mxt_dt_timeout_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+	int val = atoi(buf);
+
+	if (!val) {
+		printk("%s:invalid dt_timeout value!! should be (%d..%d)", __func__, DT2W_TIMEOUT_MIN, DT2W_TIMEOUT_MAX);
+		return 0;
+	}
+	if (val > DT2W_TIMEOUT_MAX)
+		val = DT2W_TIMEOUT_MAX;
+	else if (val < DT2W_TIMEOUT_MIN)
+		val = DT2W_TIMEOUT_MIN;
+
+	dt_timeout = val;
+
+	return count;
+}
+
+static DEVICE_ATTR(doubletap_wake, (S_IWUSR|S_IRUGO),
+	mxt_doubletap_wake_show, mxt_doubletap_wake_store);
+static DEVICE_ATTR(dt_delta_limit, (S_IWUSR|S_IRUGO),
+	mxt_dt_delta_limit_show, mxt_dt_delta_limit_store);
+static DEVICE_ATTR(dt_timeout, (S_IWUSR|S_IRUGO),
+	mxt_dt_timeout_show, mxt_dt_timeout_store);
+
+static struct kobject *android_touch_kobj;
+
+static int mxt_touch_sysfs_init(void)
+{
+	int ret ;
+
+	android_touch_kobj = kobject_create_and_add("android_touch", NULL) ;
+	if (android_touch_kobj == NULL) {
+		printk("[dt2w]%s: subsystem_register failed\n", __func__);
+		ret = -ENOMEM;
+		return ret;
+	}
+	ret = sysfs_create_file(android_touch_kobj, &dev_attr_dt_delta_limit.attr);
+	if (ret) {
+		printk("[dt2w]%s: sysfs_create_file failed\n", __func__);
+		return ret;
+	}
+	ret = sysfs_create_file(android_touch_kobj, &dev_attr_dt_timeout.attr);
+	if (ret) {
+		printk("[dt2w]%s: sysfs_create_file failed\n", __func__);
+		return ret;
+	}
+	ret = sysfs_create_file(android_touch_kobj, &dev_attr_doubletap_wake.attr);
+	if (ret) {
+		printk("[dt2w]%s: sysfs_create_file failed\n", __func__);
+		return ret;
+	}
+	return 0 ;
+}
+
+static void mxt_touch_sysfs_deinit(void)
+{
+	sysfs_remove_file(android_touch_kobj, &dev_attr_doubletap_wake.attr);
+	sysfs_remove_file(android_touch_kobj, &dev_attr_dt_delta_limit.attr);
+	sysfs_remove_file(android_touch_kobj, &dev_attr_dt_timeout.attr);
+	kobject_del(android_touch_kobj);
+}
+/* end dt2wake sysfs*/
+
 static DEVICE_ATTR(set_refer0, S_IRUGO,
 	set_refer0_mode_show, NULL);
 static DEVICE_ATTR(set_delta0, S_IRUGO,
@@ -3268,6 +3510,9 @@ static struct attribute *mxt_attrs[] = {
 	&dev_attr_object_show.attr,
 	&dev_attr_object_write.attr,
 	&dev_attr_dbg_switch.attr,
+	&dev_attr_doubletap_wake.attr,	// dt2wake sysfs
+	&dev_attr_dt_delta_limit.attr,	// dt delta limit sysfs
+	&dev_attr_dt_timeout.attr,	// dt timeout sysfs
 	NULL
 };
 
@@ -3494,6 +3739,7 @@ static int __devinit mxt_probe(struct i2c_client *client,
 		goto err_irq;
 
 #if SYSFS
+	mxt_touch_sysfs_init();	// dt2w sysfs
 	ret = sysfs_create_group(&client->dev.kobj, &mxt_attr_group);
 	if (ret)
 		pr_err("sysfs_create_group()is falled\n");
@@ -3685,6 +3931,7 @@ static int __devexit mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 
+	mxt_touch_sysfs_deinit();	// dt2w sysfs
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	unregister_early_suspend(&data->early_suspend);
 #endif

@@ -30,6 +30,8 @@
 #include <linux/wakelock.h>
 #endif
 
+extern void dt2wake_setdev(struct input_dev * input_device);
+
 extern struct class *sec_class;
 
 struct gpio_button_data {
@@ -883,6 +885,10 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 			(unsigned long)input);
 	wake_lock_init(&fake_lock, WAKE_LOCK_SUSPEND, "fake_lock");
 #endif
+
+	dt2wake_setdev(input);
+	printk(KERN_INFO "[dt2wake]: set device %s\n", input->name);
+
 	device_init_wakeup(&pdev->dev, wakeup);
 
 	return 0;
