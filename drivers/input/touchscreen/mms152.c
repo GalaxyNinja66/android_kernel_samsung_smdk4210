@@ -160,7 +160,7 @@ static void melfas_ts_early_suspend(struct early_suspend *h);
 static void melfas_ts_late_resume(struct early_suspend *h);
 #endif
 
-static struct multi_touch_info g_Mtouch_info[MELFAS_MAX_TOUCH];
+//static struct multi_touch_info g_Mtouch_info[MELFAS_MAX_TOUCH];
 
 static bool debug_print;
 static int firm_status_data;
@@ -1132,7 +1132,7 @@ static void melfas_ts_read_input(struct melfas_ts_data *ts)
 			input_report_abs(ts->input_dev,
 						ABS_MT_WIDTH_MAJOR, width);
 			if (dt2w_switch && scr_suspended)
-				doubletap_wake_func(data->fingers[i].x, data->fingers[i].y);
+				doubletap_wake_func(posX, posY);
 
 			if (ts->finger_state[id] == TSP_STATE_RELEASE) {
 #if SHOW_COORD
@@ -1401,6 +1401,21 @@ static ssize_t show_threshold(struct device *dev,
 	melfas_i2c_read(ts->client, TS_THRESHOLD, 1, &threshold);
 
 	return sprintf(buf, "%d\n", threshold);
+}
+
+static int atoi(const char *str)
+{
+	int result = 0;
+	int count = 0;
+	char count_val = str[count];
+
+	if (str == NULL)
+		return -1;
+	while (str != NULL && count_val >= '0' && count_val <= '9') {
+		result = result * 10 + count_val - '0';
+		++count;
+	}
+	return result;
 }
 
 /* dt2wake sysfs */
@@ -1873,21 +1888,6 @@ static ssize_t show_tsp_y_line_info(struct device *dev,
 					char *buf)
 {
 	return sprintf(buf, "%d\n", Y_LINE);
-}
-
-static int atoi(const char *str)
-{
-	int result = 0;
-	int count = 0;
-	char count_val = str[count];
-
-	if (str == NULL)
-		return -1;
-	while (str != NULL && count_val >= '0' && count_val <= '9') {
-		result = result * 10 + count_val - '0';
-		++count;
-	}
-	return result;
 }
 
 static ssize_t set_debug_data1(struct device *dev,
@@ -2424,8 +2424,6 @@ static int melfas_ts_suspend(struct i2c_client *client, pm_message_t mesg)
 	if (dt2w_switch) {
 		enable_irq_wake(ts->client->irq);
 	} else {
-		melfas_enabled = 0;
-		touch_is_pressed = 0;
 		disable_irq(ts->client->irq);
 	}
 	release_all_fingers(ts);
